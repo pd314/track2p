@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QToolBar,QMenu,QAction,QToolButton
+from qtpy.QtWidgets import QToolBar,QMenu,QAction,QToolButton
 
 class Toolbar(QToolBar):
     def __init__(self, main_window):

@@ -1,5 +1,5 @@
 
-from PyQt5.QtWidgets import  QWidget, QPushButton, QFileDialog, QLineEdit, QLabel, QFormLayout,QComboBox
+from qtpy.QtWidgets import  QWidget, QPushButton, QFileDialog, QLineEdit, QLabel, QFormLayout,QComboBox
 
 class ImportWindow(QWidget):
         

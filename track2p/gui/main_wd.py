@@ -4,8 +4,8 @@ from track2p.gui.toolbar import Toolbar
 from track2p.gui.statusbar import StatusBar
 from track2p.gui.data_management import DataManagement
 from track2p.gui.central_widget import CentralWidget
-from PyQt5.QtWidgets import QApplication,QMainWindow
-from PyQt5.QtGui import QIcon
+from qtpy.QtWidgets import QApplication,QMainWindow
+from qtpy.QtGui import QIcon
 
 class MainWindow(QMainWindow):
     

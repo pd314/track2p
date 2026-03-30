@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication
 import time 
 from track2p.gui.main_wd import MainWindow
-from PyQt5.QtGui import QIcon
+from qtpy.QtGui import QIcon
 import os
 
 # the same script as track2p/gui/run_gui.py

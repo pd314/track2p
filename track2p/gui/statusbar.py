@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QStatusBar,QWidget,  QHBoxLayout, QSpinBox,QPushButton,QLabel
+from qtpy.QtWidgets import QStatusBar,QWidget,  QHBoxLayout, QSpinBox,QPushButton,QLabel
 import numpy as np 
 import os 
 

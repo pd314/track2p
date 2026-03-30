@@ -1,5 +1,5 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QTabWidget, QVBoxLayout, QWidget, QSplitter, QHBoxLayout, QFrame, QFrame
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QTabWidget, QVBoxLayout, QWidget, QSplitter, QHBoxLayout, QFrame, QFrame
 from track2p.gui.fluo_plot import FluorescencePlotWidget
 from track2p.gui.roi_plot import ZoomPlotWidget
 from track2p.gui.cell_plot import CellPlotWidget

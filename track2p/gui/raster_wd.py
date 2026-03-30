@@ -1,8 +1,8 @@
 import os
 import io
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QPushButton, QFileDialog, QLineEdit, QLabel, QFormLayout, QCheckBox, QComboBox,QGraphicsView,QGraphicsScene,QSplitter,QGroupBox
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from qtpy.QtWidgets import QVBoxLayout, QWidget, QPushButton, QFileDialog, QLineEdit, QLabel, QFormLayout, QCheckBox, QComboBox,QGraphicsView,QGraphicsScene,QSplitter,QGroupBox
+from qtpy.QtCore import Qt
+from qtpy.QtGui import QPixmap
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm

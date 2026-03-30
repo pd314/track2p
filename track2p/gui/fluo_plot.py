@@ -3,9 +3,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import zscore
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 import matplotlib.patches as patches
-from PyQt5 import QtCore
+from qtpy import QtCore
 from scipy.ndimage import maximum_filter1d, minimum_filter1d, gaussian_filter
 
 
