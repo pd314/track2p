@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "track2p"
+version = "0.6.2"
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+    "numpy>=2.0.2",
+    "matplotlib>=3.9.4",
+    "scikit-image>=0.24.0",
+    "itk>=5.4.3",
+    "tqdm>=4.67.1",
+    "scikit-learn>=1.6.1",
+    "openTSNE>=1.0.2",
+    "pandas>=2.2.3",
+    "itk-elastix>=0.23.0",
+]
+
+[project.optional-dependencies]
+gui = ["qtpy>=2.4.3", "PyQt6"]
+all = ["track2p[gui]"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"*" = ["resources/logo.png"]
