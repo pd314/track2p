@@ -164,3 +164,14 @@ cython_debug/
 #.idea/
 .DS_Store
 data
+
+# UV
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
