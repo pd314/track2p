@@ -1,5 +1,6 @@
 import numpy as np
 from enum import IntEnum
+from time import perf_counter
 
 from ..logs import setup_logger
 
@@ -11,21 +12,39 @@ class Channel(IntEnum):
     ANATOMICAL = 1
 
 
+def _log_img_info(tag, img):
+    try:
+        logger.debug(
+            f"{tag} | shape={img.shape}, dtype={img.dtype}, "
+            f"min={np.min(img):.4f}, max={np.max(img):.4f}"
+        )
+    except Exception:
+        logger.debug(f"{tag} | shape={getattr(img, 'shape', None)}")
+
+
 def get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops):
 
     logger.info("Building dataset image pairs for registration")
+    t0 = perf_counter()
 
+    # channel selection
     if track_ops.reg_chan == Channel.FUNCTIONAL:
         all_ds_avg = all_ds_avg_ch1
         logger.debug("Using FUNCTIONAL channel")
 
     elif track_ops.reg_chan == Channel.ANATOMICAL:
         all_ds_avg = all_ds_avg_ch2
-        logger.warning("Using ANATOMICAL channel for registration (may be missing in some datasets)")
+        logger.warning("Using ANATOMICAL channel (may be missing / lower quality)")
 
     else:
-        logger.error(f"Unknown reg_chan: {track_ops.reg_chan}")
+        logger.error(f"Invalid reg_chan: {track_ops.reg_chan}")
         raise ValueError(f"Invalid reg_chan: {track_ops.reg_chan}")
+
+    # sanity check
+    if len(all_ds_avg) != len(track_ops.all_ds_path):
+        logger.warning(
+            f"Mismatch: images={len(all_ds_avg)} vs paths={len(track_ops.all_ds_path)}"
+        )
 
     all_ds_ref_img = []
     all_ds_mov_img = []
@@ -33,7 +52,8 @@ def get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops):
     n_pairs = len(track_ops.all_ds_path) - 1
 
     for i in range(n_pairs):
-        logger.debug(f"Preparing image pair {i+1}/{n_pairs}")
+
+        logger.debug(f"[PAIR BUILD] {i+1}/{n_pairs}")
 
         ds_ref_img = []
         ds_mov_img = []
@@ -41,12 +61,18 @@ def get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops):
         for j in range(track_ops.nplanes):
 
             try:
-                ds_ref_img.append(all_ds_avg[i][j])
-                ds_mov_img.append(all_ds_avg[i + 1][j])
+                ref_img = all_ds_avg[i][j]
+                mov_img = all_ds_avg[i + 1][j]
 
-            except Exception as e:
+                _log_img_info(f"ref ds={i} plane={j}", ref_img)
+                _log_img_info(f"mov ds={i+1} plane={j}", mov_img)
+
+                ds_ref_img.append(ref_img)
+                ds_mov_img.append(mov_img)
+
+            except Exception:
                 logger.error(
-                    f"Failed building image pair | dataset={i}, plane={j}",
+                    f"[PAIR BUILD FAIL] ds={i}, plane={j}",
                     exc_info=True
                 )
                 raise
@@ -57,7 +83,9 @@ def get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops):
     track_ops.all_ds_ref_img = all_ds_ref_img
     track_ops.all_ds_mov_img = all_ds_mov_img
 
-    logger.info("Completed dataset image pairing")
+    logger.info(
+        f"Completed dataset pairing | pairs={n_pairs} | time={perf_counter() - t0:.2f}s"
+    )
 
     return all_ds_ref_img, all_ds_mov_img
 
@@ -65,28 +93,41 @@ def get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops):
 def get_ref_reg_inters(all_roi_array_ref, all_roi_array_nonref):
 
     logger.debug(
-        f"Computing ROI intersection | ref shape={all_roi_array_ref.shape}, "
+        f"[INTERSECT] ref shape={all_roi_array_ref.shape}, "
         f"nonref shape={all_roi_array_nonref.shape}"
     )
 
     try:
-        # projection across ROI dimension
+        # projections
         ref_proj = np.sum(all_roi_array_ref, axis=2) > 0
         nonref_proj = np.sum(all_roi_array_nonref, axis=2) > 0
 
+        # density info (useful for debugging segmentation issues)
+        ref_density = np.mean(ref_proj)
+        nonref_density = np.mean(nonref_proj)
+
+        logger.debug(
+            f"[INTERSECT] density | ref={ref_density:.4f}, nonref={nonref_density:.4f}"
+        )
+
         inters = np.logical_and(ref_proj, nonref_proj)
 
-        # RGB visualization (white base)
-        ref_reg_inters = np.ones((inters.shape[0], inters.shape[1], 3), dtype=np.float32)
+        inters_ratio = np.sum(inters) / inters.size
+        logger.debug(f"[INTERSECT] overlap ratio={inters_ratio:.4f}")
 
-        # overlay intersection mask (orange tint)
+        # RGB visualization
+        ref_reg_inters = np.ones(
+            (inters.shape[0], inters.shape[1], 3),
+            dtype=np.float32
+        )
+
         ref_reg_inters[:, :, 1] -= inters / 6.0
         ref_reg_inters[:, :, 2] -= inters
 
         return ref_reg_inters
 
-    except Exception as e:
-        logger.error("Failed computing ROI intersection", exc_info=True)
+    except Exception:
+        logger.error("[INTERSECT FAIL]", exc_info=True)
         raise
 
 
@@ -97,6 +138,7 @@ def get_all_ref_nonref_inters(
 ):
 
     logger.info("Computing all reference/non-reference ROI intersections")
+    t0 = perf_counter()
 
     all_ds_all_ref_nonref_inters = []
 
@@ -105,7 +147,9 @@ def get_all_ref_nonref_inters(
     try:
         for i in range(n_pairs):
 
-            logger.debug(f"Processing pair {i+1}/{n_pairs}")
+            t_pair = perf_counter()
+
+            logger.debug(f"[PAIR] {i+1}/{n_pairs}")
 
             ds_all_ref_nonref_inters = []
 
@@ -115,20 +159,31 @@ def get_all_ref_nonref_inters(
                     ref = all_ds_all_roi_array_ref[i][j]
                     nonref = all_ds_all_roi_array_nonref[i][j]
 
+                    logger.debug(
+                        f"[PLANE] pair={i}, plane={j} | "
+                        f"ref_n={ref.shape[2]}, nonref_n={nonref.shape[2]}"
+                    )
+
                     inters = get_ref_reg_inters(ref, nonref)
 
                     ds_all_ref_nonref_inters.append(inters)
 
-                except Exception as e:
+                except Exception:
                     logger.error(
-                        f"Intersection failed | pair={i}, plane={j}",
+                        f"[INTERSECTION FAIL] pair={i}, plane={j}",
                         exc_info=True
                     )
                     raise
 
+            logger.debug(
+                f"[PAIR DONE] {i} | time={perf_counter() - t_pair:.2f}s"
+            )
+
             all_ds_all_ref_nonref_inters.append(ds_all_ref_nonref_inters)
 
-        logger.info("Completed ROI intersection computation")
+        logger.info(
+            f"Completed ROI intersection computation | total_time={perf_counter() - t0:.2f}s"
+        )
 
         return all_ds_all_ref_nonref_inters
 
