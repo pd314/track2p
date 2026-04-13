@@ -11,6 +11,16 @@ from track2p.gui.data_management import DataManagement
 
 
 class CentralWidget(QWidget):
+
+    # =========================================================
+    # ENUM (IMAGE MODE SELECTOR)
+    # =========================================================
+    class ImageMode:
+        FUNC_MEAN = 0
+        FUNC_MEAN_ENH = 1
+        ANAT_MEAN = 2
+        ANAT_MEAN_ENH = 3
+
     def __init__(self, main_window):
         super().__init__()
 
@@ -23,6 +33,11 @@ class CentralWidget(QWidget):
         self.track_ops_dict = None
 
         self.data_management = DataManagement(self)
+
+        # -----------------------------------------------------
+        # DEFAULT IMAGE MODE (IMPORTANT)
+        # -----------------------------------------------------
+        self.image_mode = self.ImageMode.FUNC_MEAN_ENH
 
         # NEVER assume it is valid yet
         self.vector_curation_t2p = None
@@ -62,6 +77,10 @@ class CentralWidget(QWidget):
     # =========================================================
     def create_mean_img(self, channel):
 
+        # allow override later (or ignore parameter)
+        if channel is not None:
+            self.image_mode = channel
+
         for i, (ops, stat_t2p) in enumerate(
             zip(self.data_management.all_ops, self.data_management.all_stat_t2p)
         ):
@@ -76,7 +95,7 @@ class CentralWidget(QWidget):
                 update_selection_callback=self.update_selection,
                 all_f_t2p=self.data_management.all_f_t2p,
                 all_ops=self.data_management.all_ops,
-                channel=channel
+                channel=self.image_mode
             )
 
             layout = QVBoxLayout(tab)
@@ -133,7 +152,6 @@ class CentralWidget(QWidget):
         self.selected_roi = selected_cell_index
         self.main_window.status_bar.spin_box.setValue(selected_cell_index)
 
-        # ---------------- SAFE VECTOR ACCESS ----------------
         vec = self.vector_curation_t2p
         if vec is None or len(vec) == 0 or selected_cell_index >= len(vec):
             state = 0
@@ -142,21 +160,18 @@ class CentralWidget(QWidget):
 
         self.main_window.status_bar.roi_state_value.setText(f"{state}")
 
-        # remove underline from all tabs
         for i in range(self.tabs.count()):
             tab_widget = self.tabs.widget(i)
             cell_object = tab_widget.findChild(CellPlotWidget)
             if cell_object:
                 cell_object.remove_previous_underline()
 
-        # underline current
         current_tab = self.tabs.currentWidget()
         if current_tab:
             cell_plot = current_tab.findChild(CellPlotWidget)
             if cell_plot:
                 cell_plot.underline_cell(selected_cell_index)
 
-        # lazy init plots
         if self.fluorescences_plotting is None:
             self.fluorescences_plotting = FluorescencePlotWidget(
                 all_f_t2p=self.data_management.all_f_t2p,
@@ -213,7 +228,6 @@ class CentralWidget(QWidget):
         self.fluorescences_plotting.display_all_f_t2p(index)
         self.rois_plotting.display_zooms(index)
 
-        # ---------------- SAFE STATUS UPDATE ----------------
         vec = self.vector_curation_t2p
         if vec is None or len(vec) == 0 or index >= len(vec):
             state = 0

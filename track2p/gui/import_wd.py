@@ -4,6 +4,8 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 
+from track2p.gui.cell_plot import ImageMode
+
 
 class ImportWindow(QWidget):
 
@@ -15,29 +17,20 @@ class ImportWindow(QWidget):
         root = QVBoxLayout()
         root.setSpacing(12)
 
-        # ── Section: folder picker ──────────────────────────────────────────
+        # ── Folder section ───────────────────────────────────────────────
         folder_section = QFormLayout()
-        folder_section.setRowWrapPolicy(QFormLayout.WrapAllRows)
 
-        folder_header = QLabel("📂  Select track2p output folder")
+        folder_header = QLabel("📂 Select track2p output folder")
         folder_header.setStyleSheet("font-weight: bold; font-size: 11pt;")
 
-        hint = QLabel(
-            "Select the <b>suite2p</b> folder directly — the one that <b>contains</b> "
-            "<code>plane0/</code>, <code>plane1/</code>, etc.<br>"
-            "<small>Example:&nbsp; <code>D:/experiment/day2/suite2p/</code></small>"
-        )
-        
+        hint = QLabel("Select suite2p folder containing plane directories.")
         hint.setWordWrap(True)
-        hint.setTextFormat(Qt.RichText)
 
         self.import_button = QPushButton("Browse…")
         self.import_button.setFixedWidth(90)
         self.import_button.clicked.connect(self._browse)
 
         self.path_display = QLabel("<i>No folder selected</i>")
-        self.path_display.setTextFormat(Qt.RichText)
-        self.path_display.setWordWrap(True)
         self.path_display.setStyleSheet("color: grey;")
 
         folder_section.addRow(folder_header)
@@ -48,25 +41,41 @@ class ImportWindow(QWidget):
         root.addLayout(folder_section)
         root.addWidget(_hline())
 
-        # ── Section: analysis options ───────────────────────────────────────
-        options_header = QLabel("⚙️  Analysis options")
+        # ── Options ──────────────────────────────────────────────────────
+        options_header = QLabel("⚙️ Analysis options")
         options_header.setStyleSheet("font-weight: bold; font-size: 11pt;")
         root.addWidget(options_header)
 
         options = QFormLayout()
-        options.setRowWrapPolicy(QFormLayout.WrapAllRows)
 
         self.plane_box = QLineEdit("0")
-        self.plane_box.setFixedWidth(50)
-        self.plane_box.setToolTip("Zero-indexed plane number (e.g. 0 for plane0)")
+        self.plane_box.setFixedWidth(60)
 
         self.trace_choice = QComboBox()
         self.trace_choice.addItems(["F", "dF/F0", "spks"])
-        self.trace_choice.setToolTip("Fluorescence trace to display in plots")
 
+        # ────────────────────────────────────────────────────────────────
+        # CHANNEL SELECTOR (ENUM ONLY + SAFE EXTRA OPTIONS)
+        # ────────────────────────────────────────────────────────────────
         self.channel_choice = QComboBox()
-        self.channel_choice.addItems(["0", "1", "Vcorr", "max_proj"])
-        self.channel_choice.setToolTip("Image channel shown in mean-image panels")
+
+        # core enum modes (SAFE PATH)
+        self.channel_choice.addItem(
+            "Functional (meanImg)", ImageMode.FUNC_MEAN
+        )
+        self.channel_choice.addItem(
+            "Functional enhanced (meanImgE)", ImageMode.FUNC_MEAN_ENH
+        )
+        self.channel_choice.addItem(
+            "Anatomical (chan2)", ImageMode.ANAT_MEAN
+        )
+        self.channel_choice.addItem(
+            "Anatomical enhanced (chan2E)", ImageMode.ANAT_MEAN_ENH
+        )
+
+        # optional non-image features (kept, but clearly tagged)
+        self.channel_choice.addItem("Vcorr (no mean image)", "vcorr")
+        self.channel_choice.addItem("Max projection (no mean image)", "max_proj")
 
         options.addRow("Plane index:", self.plane_box)
         options.addRow("Trace type:", self.trace_choice)
@@ -75,40 +84,53 @@ class ImportWindow(QWidget):
         root.addLayout(options)
         root.addWidget(_hline())
 
-        # ── Run ─────────────────────────────────────────────────────────────
-        self.run_button = QPushButton("▶  Load && Run")
-        self.run_button.setEnabled(False)          # disabled until a folder is chosen
-        self.run_button.setFixedHeight(32)
+        # ── Run ──────────────────────────────────────────────────────────
+        self.run_button = QPushButton("▶ Load && Run")
+        self.run_button.setEnabled(False)
         self.run_button.clicked.connect(self._run)
-        root.addWidget(self.run_button, alignment=Qt.AlignRight)
 
+        root.addWidget(self.run_button, alignment=Qt.AlignRight)
         root.addStretch()
+
         self.setLayout(root)
 
-    # ── slots ────────────────────────────────────────────────────────────────
-
+    # ────────────────────────────────────────────────────────────────────
     def _browse(self):
-        path = QFileDialog.getExistingDirectory(
-            self,
-            "Select the folder containing the track2p/ subfolder",
-        )
+        path = QFileDialog.getExistingDirectory(self, "Select suite2p folder")
         if path:
             self.path_to_t2p = path
             self.path_display.setText(f"<code>{path}</code>")
-            self.path_display.setStyleSheet("")
             self.run_button.setEnabled(True)
 
+    # ────────────────────────────────────────────────────────────────────
+    # SAFE CHANNEL RESOLUTION
+    # ────────────────────────────────────────────────────────────────────
+    def _resolve_channel(self):
+        value = self.channel_choice.currentData()
+
+        # 1. real enum → perfect path
+        if isinstance(value, ImageMode):
+            return value
+
+        # 2. unsupported feature → map to safe fallback
+        if value in ("vcorr", "max_proj"):
+            print(f"[WARN] '{value}' has no mean image → falling back to FUNC_MEAN_ENH")
+            return ImageMode.FUNC_MEAN_ENH
+
+        # 3. fallback safety
+        return ImageMode.FUNC_MEAN_ENH
+
+    # ────────────────────────────────────────────────────────────────────
     def _run(self):
         self.main_window.central_widget.data_management.import_files(
             self.path_to_t2p,
             plane=int(self.plane_box.text()),
             trace_type=self.trace_choice.currentText(),
-            channel=self.channel_choice.currentText(),
+            channel=self._resolve_channel(),
         )
 
 
-# ── helpers ──────────────────────────────────────────────────────────────────
-
+# ────────────────────────────────────────────────────────────────────────
 def _hline() -> QFrame:
     line = QFrame()
     line.setFrameShape(QFrame.HLine)
