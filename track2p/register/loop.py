@@ -3,9 +3,9 @@ from time import perf_counter
 from track2p.register.elastix import reg_img_elastix, itk_reg_all_roi
 from track2p.io.loaders import load_stat_ds_plane, get_all_roi_array_from_stat
 
-from ..logs import setup_logger
+from ..logs import get_logger
 
-logger = setup_logger(__name__)
+logger = get_logger(__name__)
 
 
 def run_reg_loop(all_ds_ref_img, all_ds_mov_img, track_ops):

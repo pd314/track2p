@@ -4,8 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import skimage
 
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 class ZoomPlotWidget(FigureCanvas):
     """It is used to display the roi of the selected cell across days with each zoom being a different day. 

@@ -13,7 +13,8 @@ from track2p.t2p import run_t2p
 from track2p.ops.default import DefaultTrackOps
 from track2p.gui.custom_wd import CustomDialog
 
-log = logging.getLogger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 
 class RegChannel(IntEnum):
@@ -227,7 +228,7 @@ class Track2pWindow(QWidget):
         else:
             self.track_ops.iscell_thr = None
 
-        log.info(
+        logger.info(
             "Starting track2p — transform=%s, thr_method=%s, iscell_thr=%s",
             self.track_ops.transform_type,
             self.track_ops.thr_method,

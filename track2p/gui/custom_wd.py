@@ -4,8 +4,8 @@ from qtpy.QtCore import Qt
 from track2p.t2p import run_t2p
 from track2p.ops.default import DefaultTrackOps
 
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 class CustomDialog(QDialog):
     def __init__(self, main_window, save_directory, channel):

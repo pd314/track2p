@@ -1,8 +1,8 @@
 import numpy as np
 from pathlib import Path
-from ..logs import setup_logger
 
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 def check_nplanes(track_ops):
     all_nplanes = []

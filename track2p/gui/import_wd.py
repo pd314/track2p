@@ -5,8 +5,8 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 
 from track2p.gui.cell_plot import ImageMode
-from ..logs import setup_logger 
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 class ImportWindow(QWidget):
 

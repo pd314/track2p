@@ -9,8 +9,8 @@ from skimage.exposure import match_histograms
 from track2p.plot.utils import make_rgb_img, saturate_perc, get_all_wind_mean_img
 from track2p.io.loaders import load_stat_ds_plane, get_all_roi_array_from_stat
 
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 def plot_reg_img_output(track_ops):
     # make a plot where on the top its all the images and the bottom is the overlays before and after registration

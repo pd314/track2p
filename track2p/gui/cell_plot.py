@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage
 from enum import IntEnum
-from ..logs import setup_logger 
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 # =========================================================
 # ENUM

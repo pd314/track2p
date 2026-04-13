@@ -12,8 +12,8 @@ from openTSNE import TSNE
 import matplotlib.pyplot as plt
 import copy
 
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 class RasterWindow(QWidget):
         #QWidget is the parent class

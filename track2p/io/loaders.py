@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 def load_track_ops(track_ops_path: Path):
     track_ops_path = Path(track_ops_path)

@@ -3,9 +3,9 @@ from scipy.spatial.distance import cdist
 from skimage import measure
 from skimage.filters import threshold_otsu
 
-from ..logs import setup_logger
+from ..logs import get_logger
 
-logger = setup_logger(__name__)
+logger = get_logger(__name__)
 
 
 # compute centroids

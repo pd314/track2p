@@ -1,6 +1,9 @@
-from track2p.ops.default import DefaultTrackOps
+from datetime import datetime
+
 from types import SimpleNamespace
 from pathlib import Path
+
+import logging
 
 from track2p.io.s2p_loaders import load_all_imgs, check_nplanes, load_all_ds_stat_iscell, load_all_ds_mean_img, load_all_ds_centroids
 from track2p.io.savers import npy_to_s2p, save_track_ops, save_all_pl_match_mat
@@ -18,8 +21,8 @@ import pandas as pd
 
 from time import perf_counter
 from .logs import setup_logger
-
 logger = setup_logger(__name__)
+
 
 def _plane_path(ds_path: Path, plane: int) -> Path:
     """ds_path already points at the suite2p folder; just append planeN."""
@@ -33,10 +36,27 @@ def _cell_mask(iscell: np.ndarray, thr) -> np.ndarray:
 def run_t2p(track_ops):
     start = perf_counter()
 
-    # 1) initialise save paths for figures and matched neurons output
+    # 1) initialise save paths and logger
     track_ops.init_save_paths()
-    logger.info(f"Save paths initialized at {track_ops.save_path}")
 
+    # --- log directory inside results ---
+    log_dir = Path(track_ops.save_path) / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file = log_dir / f"track2p_{timestamp}.log"
+
+    # IMPORTANT: set global config ONCE here
+    logger = setup_logger(
+        name="track2p",
+        log_file=log_file,
+        level=logging.DEBUG,
+        to_console=True,
+        force_reinit=True,
+    )
+
+    logger.info(f"Logging initialized → {log_file}")
+    
     # 2) Load data
     check_nplanes(track_ops)
 

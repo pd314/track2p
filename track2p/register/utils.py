@@ -2,9 +2,9 @@ import numpy as np
 from enum import IntEnum
 from time import perf_counter
 
-from ..logs import setup_logger
+from ..logs import get_logger
 
-logger = setup_logger(__name__)
+logger = get_logger(__name__)
 
 
 class Channel(IntEnum):

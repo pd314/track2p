@@ -2,8 +2,8 @@ import itk
 import numpy as np
 from time import perf_counter
 
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 
 def _log_img_stats(name, img):

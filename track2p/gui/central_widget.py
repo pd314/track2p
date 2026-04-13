@@ -9,8 +9,8 @@ from track2p.gui.roi_plot import ZoomPlotWidget
 from track2p.gui.cell_plot import CellPlotWidget
 from track2p.gui.data_management import DataManagement
 
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 class CentralWidget(QWidget):
 

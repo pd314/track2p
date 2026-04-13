@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+
+from ..logs import get_logger
+logger = get_logger(__name__)
 
 def plot_alldays_f1(animals, conditions, f1_values, symbols, colors, xshift=0, animals_names=None):
 

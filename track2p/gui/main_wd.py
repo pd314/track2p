@@ -7,8 +7,8 @@ from track2p.gui.central_widget import CentralWidget
 from qtpy.QtWidgets import QApplication, QMainWindow
 from qtpy.QtCore import QObject, QThread, Signal
 
-from ..logs import setup_logger
-logger = setup_logger(__name__)
+from ..logs import get_logger
+logger = get_logger(__name__)
 # =========================================================
 # WORKER (ALL HEAVY WORK HAPPENS HERE)
 # =========================================================
