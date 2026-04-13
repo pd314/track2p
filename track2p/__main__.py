@@ -1,25 +1,36 @@
-from qtpy.QtWidgets import QApplication
-from track2p.gui.main_wd import MainWindow
-from qtpy.QtGui import QIcon
-import os
+from pathlib import Path
+import logging
 
-# the same script as track2p/gui/run_gui.py
+from qtpy.QtWidgets import QApplication
+from qtpy.QtGui import QIcon
+
+from track2p.gui.main_wd import MainWindow
+from track2p.logs import setup_logger
 
 if __name__ == '__main__':
 
-    app = QApplication([])
- 
+    logger = setup_logger(
+        name="track2p",
+        level=logging.DEBUG,
+        to_console=True
+    )
 
-    # Utiliser un chemin relatif pour l'icône
-    icon_path = os.path.join(os.path.dirname(__file__), 'resources', 'logo.png')
-    print(icon_path)
-    
-    if not os.path.exists(icon_path):
-        print(f"Icon file not found: {icon_path}")
+    app = QApplication([])
+
+    base_dir = Path(__file__).resolve().parent
+    icon_path = base_dir / "resources" / "logo.png"
+
+    logger.debug(f"Resolved icon path: {icon_path}")
+
+    if not icon_path.exists():
+        logger.warning(f"Icon file not found: {icon_path}")
     else:
-        app.setWindowIcon(QIcon(icon_path))
-    
+        app.setWindowIcon(QIcon(str(icon_path)))
+
     mainWindow = MainWindow()
     mainWindow.setWindowTitle("track2p")
-   
+    mainWindow.show()
+
+    logger.info("track2p GUI started")
+
     app.exec()

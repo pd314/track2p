@@ -1,12 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from ..logs import setup_logger
+logger = setup_logger(__name__)
 
 def plot_alldays_f1(animals, conditions, f1_values, symbols, colors, xshift=0, animals_names=None):
 
     plt.figure(figsize=(4, 2), dpi=300)
     for (i, animal) in enumerate(animals):
-        print(animal)
-        print(f1_values[animal])
+        logger.info(f"Plotting F1 values for {animal}")
+        logger.debug(f"F1 values for {animal}: {f1_values[animal]}")
         y_data = f1_values[animal]
         x_data = np.arange(len(conditions)) + i * xshift
 

@@ -16,6 +16,10 @@ import numpy as np
 import scipy
 import pandas as pd
 
+from time import perf_counter
+from .logs import setup_logger
+
+logger = setup_logger(__name__)
 
 def _plane_path(ds_path: Path, plane: int) -> Path:
     """ds_path already points at the suite2p folder; just append planeN."""
@@ -27,15 +31,17 @@ def _cell_mask(iscell: np.ndarray, thr) -> np.ndarray:
 
 
 def run_t2p(track_ops):
+    start = perf_counter()
 
     # 1) initialise save paths for figures and matched neurons output
     track_ops.init_save_paths()
+    logger.info(f"Save paths initialized at {track_ops.save_path}")
 
     # 2) Load data
     check_nplanes(track_ops)
 
     if track_ops.input_format == "npy":
-        print("Converting npy data to track2p-compatible format...")
+        logger.info("Converting suite2p .npy outputs to internal format...")
         npy_to_s2p(track_ops)
 
     all_ds_avg_ch1, all_ds_avg_ch2, all_ds_avg_ch1E, all_ds_avg_ch2E = load_all_imgs(track_ops, return_es=True)
@@ -46,11 +52,13 @@ def run_t2p(track_ops):
         plot_all_planes(all_ds_avg_ch2, track_ops, ch="anatomical")
 
     # 4) Register based on chosen channel
+    logger.info("Starting registration...")
     all_ds_ref_img, all_ds_mov_img = get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops)
     all_ds_mov_img_reg, all_ds_reg_params = run_reg_loop(all_ds_ref_img, all_ds_mov_img, track_ops)
     plot_reg_img_output(track_ops)
 
     # 5) Apply computed transform to all ROIs
+    logger.info("Applying computed transforms to all ROIs...")
     all_ds_all_roi_ref, all_ds_all_roi_mov, all_ds_all_roi_reg, all_ds_roi_counter = reg_all_ds_all_roi(all_ds_reg_params, track_ops)
 
     # 6) Generate 'yellow intersection' plots
@@ -63,6 +71,7 @@ def run_t2p(track_ops):
         plot_roi_reg_output(track_ops)
 
     # 7) Optimal assignments for all dataset pairs
+    logger.info("Computing optimal assignments for all dataset pairs...")
     all_ds_assign, all_ds_assign_thr, all_ds_thr_met, all_ds_thr = get_all_ds_assign(track_ops, all_ds_all_roi_ref, all_ds_all_roi_reg)
     plot_thr_met_hist(all_ds_thr_met, all_ds_thr, track_ops)
     plot_n_matched_roi(all_ds_thr_met, all_ds_thr, track_ops)
@@ -71,19 +80,20 @@ def run_t2p(track_ops):
     all_pl_match_mat = get_all_pl_match_mat(all_ds_all_roi_ref, all_ds_assign_thr, track_ops)
 
     # 9) Save results
+    logger.info("Saving results...")
     save_track_ops(track_ops)
     save_all_pl_match_mat(all_pl_match_mat, track_ops)
 
-    print("Generating suite2p indices")
+    logger.info("Generating suite2p indices")
     generate_suite2p_indices(track_ops)
 
     # 10) Save in suite2p format
     if track_ops.save_in_s2p_format:
-        print("Saving in suite2p format...")
+        logger.info("Saving in suite2p format...")
         save_in_s2p_format(track_ops)
 
     # 11) Plot results
-    print("Finished with algorithm!\n\nGenerating plots (this can take some time)...\n\n")
+    logger.info("Finished with algorithm! Generating plots (this can take some time)...")
     all_ds_stat_iscell = load_all_ds_stat_iscell(track_ops)
     all_ds_centroids   = load_all_ds_centroids(all_ds_stat_iscell, track_ops)
     all_ds_mean_img    = load_all_ds_mean_img(track_ops)
@@ -95,8 +105,9 @@ def run_t2p(track_ops):
         all_ds_mean_img_ch2 = load_all_ds_mean_img(track_ops, ch=2)
         plot_roi_match_multiplane(all_ds_mean_img_ch2, all_ds_centroids, all_pl_match_mat, track_ops, win_size=track_ops.win_size, ch=2)
         plot_allroi_match_multiplane(all_ds_mean_img_ch2, all_pl_match_mat, track_ops, ch=2)
-
-    print("\n\n\nDone!\n\n\n")
+    
+    end = perf_counter()
+    logger.info(f'All done! Total time: {end - start:.2f} seconds)')
 
 
 def generate_suite2p_indices(track_ops):
@@ -134,9 +145,9 @@ def generate_suite2p_indices(track_ops):
             save_path / f"plane{plane}_suite2p_indices.csv",
             index=False, sep=";", na_rep="NaN",
         )
+        logger.info(f"Saved suite2p indices for plane {plane} in .npy, .mat, and .csv formats")
+        logger.debug(f"Data types - true_indices: {true_indices.dtype}, true_indices_nan: {true_indices_nan.dtype}")
 
-        print(true_indices.dtype)
-        print(true_indices_nan.dtype)
 
 
 def save_in_s2p_format(track_ops):
@@ -146,7 +157,7 @@ def save_in_s2p_format(track_ops):
     two_channel = track_ops.nchannels == 2
 
     for j in range(track_ops.nplanes):
-        print(f"plane {j}")
+        logger.info(f"plane {j}")
 
         t2p_match_mat = np.load(folderpath / f"plane{j}_match_mat.npy", allow_pickle=True)
         matched_rows  = t2p_match_mat[~np.any(t2p_match_mat == None, axis=1)]  # noqa: E711

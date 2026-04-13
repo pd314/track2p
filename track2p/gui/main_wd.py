@@ -7,7 +7,8 @@ from track2p.gui.central_widget import CentralWidget
 from qtpy.QtWidgets import QApplication, QMainWindow
 from qtpy.QtCore import QObject, QThread, Signal
 
-
+from ..logs import setup_logger
+logger = setup_logger(__name__)
 # =========================================================
 # WORKER (ALL HEAVY WORK HAPPENS HERE)
 # =========================================================
@@ -35,7 +36,7 @@ class InitWorker(QObject):
             self.finished.emit(data_management)
 
         except Exception as e:
-            print("[InitWorker ERROR]", e)
+            logger.error(f"Initialization error: {e}")
             self.finished.emit(None)
 
 
@@ -123,7 +124,7 @@ class MainWindow(QMainWindow):
     # PROGRESS CALLBACK (optional)
     # =========================================================
     def on_init_progress(self, msg: str):
-        print("[Init]", msg)
+        logger.debug(f"[Init] {msg}")
         self.statusBar().showMessage(msg)
 
     # =========================================================
@@ -131,7 +132,7 @@ class MainWindow(QMainWindow):
     # =========================================================
     def on_background_done(self, data_management):
 
-        print("[MainWindow] background init complete")
+        logger.debug("[MainWindow] background init complete")
 
         if data_management is None:
             self.statusBar().showMessage("Initialization failed")

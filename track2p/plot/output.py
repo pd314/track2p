@@ -9,6 +9,9 @@ from skimage.exposure import match_histograms
 from track2p.plot.utils import make_rgb_img, saturate_perc, get_all_wind_mean_img
 from track2p.io.loaders import load_stat_ds_plane, get_all_roi_array_from_stat
 
+from ..logs import setup_logger
+logger = setup_logger(__name__)
+
 def plot_reg_img_output(track_ops):
     # make a plot where on the top its all the images and the bottom is the overlays before and after registration
     nplanes = track_ops.nplanes
@@ -109,7 +112,7 @@ def plot_roi_reg_output(track_ops):
 
     # now populate the next (n_planes) rows with the overlays before registration
     for i in range(len(track_ops.all_ds_path)-1):
-        print(f'Plotting contours for dataset {i}/{len(track_ops.all_ds_path)-1}')
+        logger.info(f'Plotting contours for dataset {i}/{len(track_ops.all_ds_path)-1}')
         for j in range(track_ops.nplanes):
 
             row_nonreg = nplanes + 2*j # first shift for number of initial rows, then shift by 2 for each plane (before and after registration)

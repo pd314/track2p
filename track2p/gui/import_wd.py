@@ -5,7 +5,8 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 
 from track2p.gui.cell_plot import ImageMode
-
+from ..logs import setup_logger 
+logger = setup_logger(__name__)
 
 class ImportWindow(QWidget):
 
@@ -114,7 +115,7 @@ class ImportWindow(QWidget):
 
         # 2. unsupported feature → map to safe fallback
         if value in ("vcorr", "max_proj"):
-            print(f"[WARN] '{value}' has no mean image → falling back to FUNC_MEAN_ENH")
+            logger.warning(f"'{value}' has no mean image → falling back to FUNC_MEAN_ENH")
             return ImageMode.FUNC_MEAN_ENH
 
         # 3. fallback safety

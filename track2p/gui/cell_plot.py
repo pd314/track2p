@@ -1,11 +1,12 @@
-import time
+from time import perf_counter
 from qtpy.QtCore import Signal
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage
 from enum import IntEnum
-
+from ..logs import setup_logger 
+logger = setup_logger(__name__)
 
 # =========================================================
 # ENUM
@@ -77,8 +78,8 @@ class CellPlotWidget(FigureCanvas):
 
     # =========================================================
     def load_all_imgs(self):
-        print('loading all images')
-        print('channel img:', self.channel)
+        logger.info('Loading all images')
+        logger.debug(f'Channel img: {self.channel}')
 
         all_img = []
         img = None
@@ -91,7 +92,7 @@ class CellPlotWidget(FigureCanvas):
             key = 'meanImg' if self.channel == ImageMode.FUNC_MEAN else 'meanImgE'
 
             if key not in self.ops:
-                print(f"[WARN] missing {key}")
+                logger.warning(f"Missing {key}")
                 return [], None
 
             img = self.ops[key]
@@ -108,7 +109,7 @@ class CellPlotWidget(FigureCanvas):
             key = 'meanImg_chan2' if self.channel == ImageMode.ANAT_MEAN else 'meanImg_chan2E'
 
             if key not in self.ops:
-                print(f"[WARN] missing {key}")
+                logger.warning(f"Missing {key}")
                 return [], None
 
             img = self.ops[key]
@@ -118,6 +119,7 @@ class CellPlotWidget(FigureCanvas):
                     all_img.append(ops[key])
 
         else:
+            logger.error(f"Unknown channel mode: {self.channel}")
             raise ValueError(f"Unknown channel mode: {self.channel}")
 
         return all_img, img
@@ -126,7 +128,7 @@ class CellPlotWidget(FigureCanvas):
     def plot_cells(self):
         self.ax_image.clear()
 
-        start = time.time()
+        start = perf_counter()
 
         match_mean_img = skimage.exposure.match_histograms(
             self.img,
@@ -149,9 +151,8 @@ class CellPlotWidget(FigureCanvas):
             cell_count += 1
 
         self.ax_image.axis('off')
-
-        print(f'time for plotting cells: {time.time()-start}')
-        print(f'Total cells plotted: {cell_count}')
+        logger.info(f'Time for plotting cells: {perf_counter()-start:.2f} seconds')
+        logger.info(f'Total cells plotted: {cell_count}')
 
         self.draw()
 
@@ -159,7 +160,7 @@ class CellPlotWidget(FigureCanvas):
     def plot_cells_remix(self, keys):
         self.ax_image.clear()
 
-        start = time.time()
+        start = perf_counter()
 
         match_mean_img = skimage.exposure.match_histograms(
             self.img,
@@ -186,8 +187,8 @@ class CellPlotWidget(FigureCanvas):
 
         self.ax_image.axis('off')
 
-        print(f'time for plotting cells: {time.time()-start}')
-        print(f'Total cells plotted: {cell_count}')
+        logger.info(f'Time for plotting cells: {perf_counter()-start:.2f} seconds')
+        logger.info(f'Total cells plotted: {cell_count}')
 
         self.draw()
 
@@ -259,7 +260,7 @@ class CellPlotWidget(FigureCanvas):
 
     # =========================================================
     def on_mouse_press(self, event):
-        start = time.time()
+        start = perf_counter()
 
         if event.inaxes == self.ax_image:
             x, y = event.xdata, event.ydata
@@ -271,7 +272,7 @@ class CellPlotWidget(FigureCanvas):
                 if np.any((xpix == int(x)) & (ypix == int(y))):
                     self.selected_cell_index = j
                     self.update_selection_callback(j)
-                    print(f"Cell selected: {j}", flush=True)
+                    logger.info(f'Cell selected: {j}')
                     break
 
-        print(f'time taken for update: {time.time()-start}')
+        logger.info(f'Time taken for update: {perf_counter()-start:.2f} seconds')

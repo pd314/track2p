@@ -1,12 +1,14 @@
 import numpy as np
 from pathlib import Path
+from ..logs import setup_logger
 
+logger = setup_logger(__name__)
 
 def check_nplanes(track_ops):
     all_nplanes = []
     for ds_path in map(Path, track_ops.all_ds_path):
         n_planes = sum(1 for p in ds_path.iterdir() if p.name.startswith("plane"))
-        print(f"Found {n_planes} planes in {ds_path}")
+        logger.info(f"Found {n_planes} planes in {ds_path}")
         all_nplanes.append(n_planes)
 
     track_ops.all_nplanes = all_nplanes
@@ -18,7 +20,7 @@ def check_nplanes(track_ops):
         )
 
     track_ops.nplanes = all_nplanes[0]
-    print(f"Found {track_ops.nplanes} planes in all datasets")
+    logger.info(f"Found {track_ops.nplanes} planes in all datasets")
 
 
 def _load_ops(ds_path: Path, plane: int) -> dict:
@@ -57,7 +59,7 @@ def load_all_imgs(track_ops, return_es=False):
         ]
 
         for i, n in enumerate(nchannels):
-            print(f"nchannels: {n} for plane {i} in dataset {ds_path}")
+            logger.info(f"nchannels: {n} for plane {i} in dataset {ds_path}")
 
         all_ds_avg_ch1.append(avg_ch1)
         all_ds_avg_ch2.append(avg_ch2)
@@ -81,7 +83,7 @@ def load_all_imgs(track_ops, return_es=False):
         )
 
     track_ops.nchannels = all_ds_nchannels[0][0]
-    print(f"Found {track_ops.nchannels} channels in all datasets")
+    logger.info(f"Found {track_ops.nchannels} channels in all datasets")
 
     if return_es:
         return all_ds_avg_ch1, all_ds_avg_ch2, all_ds_avg_ch1E, all_ds_avg_ch2E

@@ -9,6 +9,8 @@ from track2p.gui.roi_plot import ZoomPlotWidget
 from track2p.gui.cell_plot import CellPlotWidget
 from track2p.gui.data_management import DataManagement
 
+from ..logs import setup_logger
+logger = setup_logger(__name__)
 
 class CentralWidget(QWidget):
 
@@ -127,7 +129,7 @@ class CentralWidget(QWidget):
             )
 
         else:
-            print("Both import_window and t2p_window are not initialized.")
+            logger.warning("Both import_window and t2p_window are not initialized. Cannot create mean image from curation.")
 
     # =========================================================
     def clear(self):

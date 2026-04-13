@@ -1,5 +1,5 @@
 import os
-
+# unsed anymore we have pathlib
 # make a directory based on path if it doesn't exist yet
 
 def make_dir(path):

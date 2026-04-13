@@ -8,6 +8,8 @@ import matplotlib.patches as patches
 from qtpy import QtCore
 from scipy.ndimage import maximum_filter1d, minimum_filter1d, gaussian_filter
 
+from ..logs import setup_logger
+logger = setup_logger(__name__) 
 
 class FluorescencePlotWidget(FigureCanvas):
     """this class is used to display the fluorescence of the selected cell across days. It also allows to select a region of interest (ROI) on the fluorescence plot and zoom in on the selected ROI"""
@@ -53,7 +55,7 @@ class FluorescencePlotWidget(FigureCanvas):
     
     def draw_point(self):
         if hasattr(self, 'point') and self.point in self.ax_fluorescence.collections:
-            print(self.ax_fluorescence.collections)
+            logger.debug(self.ax_fluorescence.collections)
             self.ax_fluorescence.collections.remove(self.point)
         self.point = self.ax_fluorescence.scatter([self.x0], [self.y0], s=5, color='w')  # Create a new point
         self.draw()

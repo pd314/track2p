@@ -1,6 +1,7 @@
 from pathlib import Path
 import numpy as np
-
+from ..logs import setup_logger
+logger = setup_logger(__name__)
 
 def load_track_ops(track_ops_path: Path):
     track_ops_path = Path(track_ops_path)
@@ -39,8 +40,8 @@ def load_stat_ds_plane(track_ops_path: Path, track_ops, plane_idx: int = 0):
 
     dataset_name = track_ops_path.name
 
-    print(f"Loading ROIs for plane {plane_idx} in dataset '{dataset_name}'")
-    print(
+    logger.info(f"Loading ROIs for plane {plane_idx} in dataset '{dataset_name}'")
+    logger.info(
         f"Chose {len_stat_iscell}/{len_stat_allcell} ROIs "
         f"(iscell_thr={track_ops.iscell_thr})"
     )

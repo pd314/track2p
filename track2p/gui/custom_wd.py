@@ -4,6 +4,9 @@ from qtpy.QtCore import Qt
 from track2p.t2p import run_t2p
 from track2p.ops.default import DefaultTrackOps
 
+from ..logs import setup_logger
+logger = setup_logger(__name__)
+
 class CustomDialog(QDialog):
     def __init__(self, main_window, save_directory, channel):
         super(CustomDialog,self).__init__()
@@ -55,12 +58,12 @@ class CustomDialog(QDialog):
             self.close()
             pass
         else: 
-            print("Opening GUI...")
+            logger.debug("Opening GUI...")
             plane_text, trace_type , channel = self.get_inputs()
             self.plane = int(plane_text)
             self.trace_type = trace_type
             self.channel= channel
-            print(f"Converted plane: {self.plane}, Trace type: {self.trace_type}")  # Debugging print
+            logger.info(f"Converted plane: {self.plane}, Trace type: {self.trace_type}")
             self.main_window.central_widget.data_management.import_files(t2p_folder_path = self.save_directory, plane=self.plane, trace_type=self.trace_type, channel= self.channel)
             self.close()
 

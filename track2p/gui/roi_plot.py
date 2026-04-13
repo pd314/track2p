@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import skimage
 
+from ..logs import setup_logger
+logger = setup_logger(__name__)
 
 class ZoomPlotWidget(FigureCanvas):
     """It is used to display the roi of the selected cell across days with each zoom being a different day. 
@@ -34,9 +36,9 @@ class ZoomPlotWidget(FigureCanvas):
                 mean_img=self.imgs[i]
                 stat_t2p = self.all_stat_t2p[i]
                 median_coord = stat_t2p[selected_cell_index]['med']
-                print(f'median_coord : ', median_coord)
+                logger.debug(f'median_coord : {median_coord}')
 
-                print(mean_img.shape)
+                logger.debug(f'mean_img.shape : {mean_img.shape}')
                 # Définir la taille de la marge
                 margin = 20
 
@@ -65,8 +67,8 @@ class ZoomPlotWidget(FigureCanvas):
                 # Extraire la ROI de l'image avec la marge
                 roi = range_img[y_start:y_end, x_start:x_end]
 
-                print(range_img.shape)
-                print(roi.shape)
+                logger.debug(f'range_img.shape : {range_img.shape}')
+                logger.debug(f'roi.shape : {roi.shape}')
 
             
                 #prob and index 

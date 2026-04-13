@@ -12,7 +12,8 @@ from openTSNE import TSNE
 import matplotlib.pyplot as plt
 import copy
 
-
+from ..logs import setup_logger
+logger = setup_logger(__name__)
 
 class RasterWindow(QWidget):
         #QWidget is the parent class
@@ -126,11 +127,11 @@ class RasterWindow(QWidget):
             if self.day_choice.count() ==1:
                 self.all_stat_t2p=self.main_window.central_widget.data_management.all_stat_t2p
                 if self.checkbox3.isChecked() or self.checkbox5.isChecked():
-                    print(self.day_choice.count())
+                    logger.debug(f'Updating day choice combo box with recording indices (count: {self.day_choice.count()})')
                     self.day_choice.clear()
                     for i in range(len(self.all_stat_t2p)):
                         self.day_choice.addItem(str(i + 1))
-                print('ComboBox updated')
+                logger.debug('ComboBox updated')
 
         def handle_checkbox_state(self):
             sender = self.sender()
@@ -162,14 +163,14 @@ class RasterWindow(QWidget):
                 self.vmax.setVisible(False)
 
         def fit_pca_1d(self,data):
-            print('fitting 1d-PCA...')
+            logger.debug('fitting 1d-PCA...')
             pca=PCA(n_components=1)
             pca.fit(data)
             embedding = pca.components_.T
             return embedding
 
         def fit_tsne_1d(self,data):
-            print('fitting 1d-tSNE...')
+            logger.debug('fitting 1d-tSNE...')
             tsne = TSNE(
             n_components=1,
             perplexity=30,
@@ -187,7 +188,7 @@ class RasterWindow(QWidget):
             save_path, _ = QFileDialog.getSaveFileName(self, "Select Save Path")
             if save_path:
                 self.save_path = save_path
-            print(f'Selected save path: {self.save_path}')
+            logger.debug(f'Selected save path: {self.save_path}')
             plt.savefig(self.save_path)
                 
         def get_checkbox_choice(self):
@@ -200,9 +201,9 @@ class RasterWindow(QWidget):
                 self.raster_type='sorting_by_PCA'
                 all_pca_emb_1d = []
                 for f in tqdm(self.all_f_t2p_preproc):
-                    print(f.shape)
+                    logger.debug(f'Processing raster {f.shape}')
                     pca_emb_1d = self.fit_pca_1d(f.T)
-                    print(pca_emb_1d.shape)
+                    logger.debug(f'PCA embedding shape: {pca_emb_1d.shape}')
                     all_pca_emb_1d.append(pca_emb_1d)
                 all_f_t2p_sorted = []
                 for (i, f) in enumerate(self.all_f_t2p_preproc):
@@ -214,9 +215,9 @@ class RasterWindow(QWidget):
                 self.raster_type='sorting_by_PCA_and_by_day_' + str(self.day_choice.currentText())
                 all_pca_emb_1d = []
                 for f in tqdm(self.all_f_t2p_preproc):
-                    print(f.shape)
+                    logger.debug(f'Processing raster {f.shape}')
                     pca_emb_1d = self.fit_pca_1d(f.T)
-                    print(pca_emb_1d.shape)
+                    logger.debug(f'PCA embedding shape: {pca_emb_1d.shape}')
                     all_pca_emb_1d.append(pca_emb_1d)
                 all_f_t2p_sorted = []
                 for (i, f) in enumerate(self.all_f_t2p_preproc):
@@ -229,7 +230,7 @@ class RasterWindow(QWidget):
                 self.raster_type='sorting_by_tSNE'
                 all_tsne_emb_1d = []
                 for f in tqdm(self.all_f_t2p_preproc):
-                    print(f.shape)
+                    logger.debug(f'Processing raster {f.shape}')
                     tsne_emb_1d = self.fit_tsne_1d(f.T)
                     all_tsne_emb_1d.append(tsne_emb_1d)
                 all_f_t2p_sorted = []
@@ -242,7 +243,7 @@ class RasterWindow(QWidget):
                 self.raster_type='sorting_tSNE_and_by_day_' + str(self.day_choice.currentText())
                 all_tsne_emb_1d = []
                 for f in tqdm(self.all_f_t2p_preproc):
-                    print(f.shape)
+                    logger.debug(f'Processing raster {f.shape}')
                     tsne_emb_1d = self.fit_tsne_1d(f.T)
                     all_tsne_emb_1d.append(tsne_emb_1d)
                 all_f_t2p_sorted = []
@@ -257,7 +258,7 @@ class RasterWindow(QWidget):
         def preprocessing(self):
             bin_data = True
             self.bin_size = int(self.bin.text()) #number of frames to average (1 = no averging)
-            print(f'bin_size: {self.bin_size}')
+            logger.debug(f'bin_size: {self.bin_size}')
             rem_zero_rows = True
             if bin_data:
                 all_f_t2p_original = copy.deepcopy(self.all_f_t2p)
@@ -267,7 +268,7 @@ class RasterWindow(QWidget):
             if rem_zero_rows:
                 # get zero rows in any of the datasets
                 zero_rows = np.any([np.sum(np.isnan(f), axis=1) for f in self.all_f_t2p_preproc], axis=0)
-                print(f'Number of zero rows: {np.sum(zero_rows)}') 
+                logger.debug(f'Number of zero rows: {np.sum(zero_rows)}') 
                 self.all_f_t2p_preproc= [f[~zero_rows, :] for f in self.all_f_t2p_preproc]
 
                 
@@ -310,7 +311,7 @@ class RasterWindow(QWidget):
             scene=QGraphicsScene()
             scene.addPixmap(pixmap)
             self.view.setScene(scene)
-            print('Done')
+            logger.debug('Done')
                 
             
 
@@ -319,34 +320,34 @@ class RasterWindow(QWidget):
 
                 track_ops=self.main_window.central_widget.data_management.track_ops
                 t2p_folder_path= os.path.dirname(track_ops.all_ds_path[0])
-                print(t2p_folder_path)
+                logger.debug(f'Selected t2p folder path: {t2p_folder_path}')
                 if track_ops.nplanes > 1:
                     self.results_by_plane = {}
-                    print(track_ops.nplanes)
+                    logger.debug(f'Number of planes: {track_ops.nplanes}')
                     for plane in range (track_ops.nplanes):
-                        print(plane)
+                        logger.debug(f'Processing plane {plane}')
                         if plane == self.main_window.central_widget.data_management.plane:
-                            print('plane is equal to the current plane, skipping to the next plane')
+                            logger.debug('plane is equal to the current plane, skipping to the next plane')
                             self.results_by_plane[plane]={
                             'all_ft2p': self.main_window.central_widget.data_management.all_f_t2p,
                             'all_fneu2p': self.main_window.central_widget.data_management.all_fneu
                                         }
                             continue
-                        print('plane is not equal to the current plane')
+                        logger.debug('plane is not equal to the current plane')
                         t2p_match_mat = np.load(os.path.join(t2p_folder_path,"track2p" ,f"plane{plane}_match_mat.npy"), allow_pickle=True)
                         t2p_match_mat_allday = t2p_match_mat[~np.any(t2p_match_mat == None, axis=1), :] 
                         trace_type=self.main_window.central_widget.data_management.trace_type #common to all planes
-                        print(f"Processing plane {plane}")
+                        logger.debug(f"Processing plane {plane}")
                         self.process_plane(plane,track_ops,t2p_match_mat_allday,trace_type)
                     for plane, data in self.results_by_plane .items():
-                            print(f"Plane {plane}:")
-                            print(f"  all_ft2p: {len(data['all_ft2p'])}")
-                            print(f"  {len(data['all_ft2p'][0])}")
+                            logger.debug(f"Plane {plane}:")
+                            logger.debug(f"  all_ft2p: {len(data['all_ft2p'])}")
+                            logger.debug(f"  {len(data['all_ft2p'][0])}")
                    
                     # Initialiser une liste pour stocker les éléments concaténés
                     concatenated_elements = []
                     num_elements = len(self.results_by_plane[0]['all_ft2p'])
-                    print(f"Number of elements: {num_elements}")
+                    logger.debug(f"Number of elements: {num_elements}")
                     # Itérer sur les indices des éléments
                     for i in range(num_elements):
                         elements_to_concatenate = []
@@ -356,16 +357,16 @@ class RasterWindow(QWidget):
                                 element = self.results_by_plane[plane]['all_ft2p'][i]
                                 elements_to_concatenate.append(element)
                             else:
-                                print("La clé 'all_ft2p' n'existe pas ou n'est pas une liste.")
+                                logger.debug("La clé 'all_ft2p' n'existe pas ou n'est pas une liste.")
                         if elements_to_concatenate:
                             concatenated_element = np.vstack(elements_to_concatenate)
                             concatenated_elements.append(concatenated_element)
 
                     # Afficher les éléments concaténés
                     for idx, concatenated_element in enumerate(concatenated_elements):
-                        print(f"Concatenated element {idx}:")
-                        #print(concatenated_element)
-                        print(concatenated_element.shape)
+                        logger.debug(f"Concatenated element {idx}:")
+                        #logger.debug(concatenated_element)
+                        logger.debug(concatenated_element.shape)
                     
                     return concatenated_elements
 
@@ -377,13 +378,13 @@ class RasterWindow(QWidget):
             for (i, ds_path) in enumerate(track_ops.all_ds_path):
                 iscell = np.load(os.path.join(ds_path, 'suite2p', f'plane{plane}', 'iscell.npy'), allow_pickle=True)
                 if trace_type == 'F' :
-                    print('F trace')
+                    logger.debug('F trace')
                     f = np.load(os.path.join(ds_path, 'suite2p', f'plane{plane}', 'F.npy'), allow_pickle=True)
                 if trace_type == 'spks':
-                    print('spks trace')
+                    logger.debug('spks trace')
                     f = np.load(os.path.join(ds_path, 'suite2p', f'plane{plane}', 'spks.npy'), allow_pickle=True)
                 if trace_type == 'dF/F0':
-                    print('dF/F0 trace')
+                    logger.debug('dF/F0 trace')
                     if all_fneu2p is None:
                         all_fneu2p= []
                     f = np.load(os.path.join(ds_path, 'suite2p', f'plane{plane}', 'F.npy'), allow_pickle=True)
