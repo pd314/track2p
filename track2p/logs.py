@@ -1,5 +1,6 @@
 import logging
-import os
+import sys
+from pathlib import Path
 
 
 def setup_logger(
@@ -9,7 +10,7 @@ def setup_logger(
     to_console: bool = True,
 ):
     """
-    Creates and configures a reusable logger.
+    Creates and configures a reusable logger with UTF-8 support.
 
     Args:
         name (str): Logger name
@@ -23,31 +24,36 @@ def setup_logger(
 
     logger = logging.getLogger(name)
 
-    # Prevent duplicate handlers if logger already exists
+    # If already configured → update level and return
     if logger.handlers:
+        logger.setLevel(level)
         return logger
 
     logger.setLevel(level)
+    logger.propagate = False  # prevent duplicate logs
 
-    # Log format (includes file name, line number, function, time, level)
     formatter = logging.Formatter(
         fmt="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)d | %(funcName)s() | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Ensure log directory exists
-    os.makedirs(os.path.dirname(log_file) or ".", exist_ok=True)
+    log_path = Path(log_file)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # File handler
-    file_handler = logging.FileHandler(log_file)
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
     file_handler.setFormatter(formatter)
     file_handler.setLevel(level)
-
     logger.addHandler(file_handler)
 
-    # Optional console handler
     if to_console:
-        console_handler = logging.StreamHandler()
+        stream = sys.stdout
+
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except Exception:
+            pass  # safe fallback
+
+        console_handler = logging.StreamHandler(stream)
         console_handler.setFormatter(formatter)
         console_handler.setLevel(level)
         logger.addHandler(console_handler)
