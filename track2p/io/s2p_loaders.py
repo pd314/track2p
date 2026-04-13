@@ -1,116 +1,106 @@
-import os
 import numpy as np
+from pathlib import Path
+
 
 def check_nplanes(track_ops):
+    folder = "suite2p" if track_ops.input_format == "suite2p" else "data_npy"
     all_nplanes = []
 
-    for ds_path in track_ops.all_ds_path:
-        # check how many subfolders starting with plane* in suite2p folder
-        if track_ops.input_format == 'suite2p':
-            n_planes = len([name for name in os.listdir(ds_path + '/suite2p') if name.startswith('plane')])
-        elif track_ops.input_format == 'npy':
-            n_planes = len([name for name in os.listdir(ds_path + '/data_npy') if name.startswith('plane')])
-        print(f'Found {n_planes} planes in {ds_path}')
+    for ds_path in map(Path, track_ops.all_ds_path):
+        n_planes = sum(1 for p in (ds_path / folder).iterdir() if p.name.startswith("plane"))
+        print(f"Found {n_planes} planes in {ds_path}")
         all_nplanes.append(n_planes)
+
     track_ops.all_nplanes = all_nplanes
-    # if all elements in all_n_planes are the same, then save it in track_ops.n_planes
-    if all_nplanes.count(all_nplanes[0]) == len(all_nplanes):
-        track_ops.nplanes = all_nplanes[0]
-        print(f'Found {track_ops.nplanes} planes in all datasets')
-    else:
-        print('Found different number of planes in different datasets')
-        print('Please check your dataset paths')
-        print('Exiting...')
-        exit()
+
+    if len(set(all_nplanes)) != 1:
+        raise ValueError(
+            f"Inconsistent plane counts across datasets: {all_nplanes}. "
+            "Please check your dataset paths."
+        )
+
+    track_ops.nplanes = all_nplanes[0]
+    print(f"Found {track_ops.nplanes} planes in all datasets")
 
 
-# loads mean images
+def _load_ops(ds_path: Path, plane: int) -> dict:
+    return np.load(ds_path / "suite2p" / f"plane{plane}" / "ops.npy", allow_pickle=True).item()
+
+
 def load_all_imgs(track_ops):
-    all_ds_avg_ch1 = []
-    all_ds_avg_ch2 = []
-    all_ds_nchannels = []
+    all_ds_avg_ch1, all_ds_avg_ch2, all_ds_nchannels = [], [], []
 
-    for ds_path in track_ops.all_ds_path:
-        ds_nchannels = []
-        ds_avg_ch1 = []
-        ds_avg_ch2 = []
+    for ds_path in map(Path, track_ops.all_ds_path):
+        plane_ops = [_load_ops(ds_path, i) for i in range(track_ops.nplanes)]
 
-        for i in range(track_ops.nplanes):
-            ops = np.load(ds_path + '/suite2p/plane' + str(i) + '/ops.npy', allow_pickle=True).item()
-            nchannels = ops['nchannels']
-            print('nchannels: ' + str(nchannels) + ' for plane ' + str(i) + ' in dataset ' + ds_path)
-            ds_avg_ch1.append(ops['meanImg'])
-            ds_avg_ch2.append(ops['meanImg_chan2']) if nchannels==2 else ds_avg_ch2.append(None)
-            ds_nchannels.append(nchannels)
+        nchannels = [ops["nchannels"] for ops in plane_ops]
+        avg_ch1   = [ops["meanImg"] for ops in plane_ops]
+        avg_ch2   = [
+            ops["meanImg_chan2"] if n == 2 else None
+            for ops, n in zip(plane_ops, nchannels)
+        ]
 
-        all_ds_avg_ch1.append(ds_avg_ch1)
-        all_ds_avg_ch2.append(ds_avg_ch2)
-        all_ds_nchannels.append(ds_nchannels)
+        for i, n in enumerate(nchannels):
+            print(f"nchannels: {n} for plane {i} in dataset {ds_path}")
 
-    track_ops.all_ds_avg_ch1 = all_ds_avg_ch1
-    track_ops.all_ds_avg_ch2 = all_ds_avg_ch2
+        all_ds_avg_ch1.append(avg_ch1)
+        all_ds_avg_ch2.append(avg_ch2)
+        all_ds_nchannels.append(nchannels)
+
+    track_ops.all_ds_avg_ch1   = all_ds_avg_ch1
+    track_ops.all_ds_avg_ch2   = all_ds_avg_ch2
     track_ops.all_ds_nchannels = all_ds_nchannels
 
-    # if all elements in all_ds_nchannels are the same, then print its fine otherwise exit
-    if all_ds_nchannels.count(all_ds_nchannels[0]) == len(all_ds_nchannels):
-        track_ops.nchannels = all_ds_nchannels[0][0]
-        print(f'Found {track_ops.nchannels} channels in all datasets')
-    else:    
-        print('Found different number of channels in different datasets')
-        print('Please check your dataset paths')
-        print('Exiting...')
-        exit()
+    if len(set(map(tuple, all_ds_nchannels))) != 1:
+        raise ValueError(
+            "Inconsistent channel counts across datasets. Please check your dataset paths."
+        )
+
+    track_ops.nchannels = all_ds_nchannels[0][0]
+    print(f"Found {track_ops.nchannels} channels in all datasets")
 
     return all_ds_avg_ch1, all_ds_avg_ch2
 
-def load_all_ds_stat_iscell(track_ops):
-    all_ds_stat_iscell = []
-    for (i, ds_path) in enumerate(track_ops.all_ds_path):
-        ds_stat_iscell = []
-        for j in range(track_ops.nplanes):
-            stat = np.load(os.path.join(ds_path, 'suite2p', f'plane{j}', 'stat.npy'), allow_pickle=True)
-            iscell = np.load(os.path.join(ds_path, 'suite2p', f'plane{j}', 'iscell.npy'), allow_pickle=True)
-            if track_ops.iscell_thr==None:
-                stat_iscell = stat[iscell[:,0]==1]
-            else: 
-                stat_iscell = stat[iscell[:,1]>track_ops.iscell_thr]
-            ds_stat_iscell.append(stat_iscell)
-        all_ds_stat_iscell.append(ds_stat_iscell)
 
-    return all_ds_stat_iscell
+def load_all_ds_stat_iscell(track_ops):
+    thr = track_ops.iscell_thr
+
+    def filter_stat(stat, iscell):
+        mask = iscell[:, 1] > thr if thr is not None else iscell[:, 0] == 1
+        return stat[mask]
+
+    return [
+        [
+            filter_stat(
+                np.load(Path(ds_path) / "suite2p" / f"plane{j}" / "stat.npy",   allow_pickle=True),
+                np.load(Path(ds_path) / "suite2p" / f"plane{j}" / "iscell.npy", allow_pickle=True),
+            )
+            for j in range(track_ops.nplanes)
+        ]
+        for ds_path in track_ops.all_ds_path
+    ]
+
 
 def load_all_ds_ops(track_ops):
-    all_ds_ops = []
-    for ds_path in track_ops.all_ds_path:
-        ds_ops = []
-        for j in range(track_ops.nplanes):
-            ops = np.load(os.path.join(ds_path, 'suite2p', f'plane{j}', 'ops.npy'), allow_pickle=True).item()
-            ds_ops.append(ops)
-        all_ds_ops.append(ds_ops)
-    
-    return all_ds_ops
+    return [
+        [_load_ops(Path(ds_path), j) for j in range(track_ops.nplanes)]
+        for ds_path in track_ops.all_ds_path
+    ]
+
 
 def load_all_ds_mean_img(track_ops, ch=1):
-    all_ds_ops = load_all_ds_ops(track_ops)
-    all_ds_mean_img = [] 
-    for ds_ops in all_ds_ops:
-        ds_mean_img = []
-        for ops in ds_ops:
-            mean_img = ops['meanImg'] if ch==1 else ops['meanImg_chan2']
-            ds_mean_img.append(mean_img)
-        all_ds_mean_img.append(ds_mean_img)
-        
-    return all_ds_mean_img
+    img_key = "meanImg" if ch == 1 else "meanImg_chan2"
+    return [
+        [ops[img_key] for ops in ds_ops]
+        for ds_ops in load_all_ds_ops(track_ops)
+    ]
+
 
 def load_all_ds_centroids(all_ds_stat_iscell, track_ops):
-    all_ds_centroids = []
-    for i in range(len(track_ops.all_ds_path)):
-        ds_centroids = []
-        for stat_iscell in all_ds_stat_iscell[i]:
-            centroids = []
-            for roi_stat in stat_iscell:
-                centroids.append(roi_stat['med'])
-            ds_centroids.append(np.array(centroids))
-        all_ds_centroids.append(ds_centroids)
-        
-    return all_ds_centroids
+    return [
+        [
+            np.array([roi["med"] for roi in stat_iscell])
+            for stat_iscell in ds_stat_iscell
+        ]
+        for ds_stat_iscell in all_ds_stat_iscell
+    ]
