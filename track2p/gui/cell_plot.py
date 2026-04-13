@@ -79,12 +79,12 @@ class CellPlotWidget(FigureCanvas):
                 all_img.append(img_ops)            
         if self.channel == '0':
             #print('0')
-            all_img = [ops['meanImg'] for ops in self.all_ops]
-            img= self.ops['meanImg']
+            all_img = [ops['meanImgE'] for ops in self.all_ops]
+            img= self.ops['meanImgE']
         if self.channel == '1':
             #print('1')
-            all_img = [ops['meanImg_chan2'] for ops in self.all_ops]
-            img= self.ops['meanImg_chan2']
+            all_img = [ops['meanImgE_chan2'] for ops in self.all_ops]
+            img= self.ops['meanImgE_chan2']
 
         return all_img, img
         

@@ -1,223 +1,255 @@
+import logging
+from pathlib import Path
+from enum import IntEnum
 
-import os
-from qtpy.QtWidgets import QVBoxLayout, QWidget,  QHBoxLayout, QPushButton, QFileDialog, QLineEdit, QLabel, QFormLayout, QListWidget, QMessageBox,QListWidgetItem, QInputDialog,QCheckBox,QSizePolicy,QComboBox,QDialog
+from qtpy.QtWidgets import (
+    QWidget, QPushButton, QFileDialog, QLineEdit, QLabel,
+    QFormLayout, QListWidget, QMessageBox, QListWidgetItem,
+    QCheckBox, QSizePolicy, QComboBox, QVBoxLayout, QHBoxLayout,
+)
 from qtpy.QtCore import Qt
+
 from track2p.t2p import run_t2p
 from track2p.ops.default import DefaultTrackOps
 from track2p.gui.custom_wd import CustomDialog
+
+log = logging.getLogger(__name__)
+
+
+class RegChannel(IntEnum):
+    FUNCTIONAL = 0
+    ANATOMICAL = 1
+
+
 class Track2pWindow(QWidget):
-        """it is used to set the parameters of the track2p algorithm"""
-        def __init__(self, main_wd):
-            super(Track2pWindow,self).__init__()
-            self.main_window = main_wd
-            layout = QFormLayout()
-            self.setLayout(layout)
-            self.track_ops = DefaultTrackOps()
-            self.saved_directory=None
-            self.plane=None
-           
-       
-            instruction1=QLabel("Import the directory containing subfolders for each session of a given subject:")
-            self.import_recording_button = QPushButton("Import", self)
-            self.import_recording_button.clicked.connect(self.import_path_to_recordings)
-            layout.addRow(instruction1,self.import_recording_button)
-            
-            instruction2= QLabel("Imported path:")
-            instruction2.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            self.path_recording=QLabel()
-            self.path_recording.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            layout.addRow(instruction2,self.path_recording)
+    """Set parameters for and launch the track2p algorithm."""
 
-            
-            instruction3=QLabel("Once loaded press '->' to add to the list of paths to use for track2p (in the correct order):")
-            
-            # TODO: Here add da driopdown menu to select the input format (e.g. suite2p, raw npy, etc.)
-            instruction_format=QLabel("Input format:")
-            self.format=QComboBox()
-            self.format.addItem("suite2p")
-            self.format.addItem("npy")
-            self.format.setCurrentIndex(0)
-            self.format.currentIndexChanged.connect(self.display_suite2p_options)
+    def __init__(self, main_wd):
+        super().__init__()
+        self.main_window = main_wd
+        self.track_ops = DefaultTrackOps()
+        self.saved_directory: Path | None = None
 
+        layout = QFormLayout()
+        self.setLayout(layout)
 
-            instruction4= QLabel("Method for selecting suite2p ROIs:")
-            field_checkbox= QVBoxLayout()
-            self.checkbox1 = QCheckBox('manually curated', self)
-            self.checkbox2 = QCheckBox('iscell threshold', self)
-            self.checkbox2.stateChanged.connect(self.display_iscell)
-            field_checkbox.addWidget(self.checkbox1)
-            field_checkbox.addWidget(self.checkbox2)
+        # ── Session folder picker ────────────────────────────────────────────
+        session_hint = QLabel(
+            "Select the <b>parent folder</b> whose subfolders are individual sessions "
+            "(one per recording day) — each subfolder must be a suite2p output folder "
+            "containing <code>plane0/</code>, <code>plane1/</code>, etc.<br>"
+            "<small>Example:&nbsp;<code>D:/subject01/</code>&nbsp; containing "
+            "<code>day1/</code>, <code>day2/</code>, …</small>"
+        )
+        session_hint.setWordWrap(True)
+        session_hint.setTextFormat(Qt.RichText)
 
-            
-            self.is_cell_thr=  QLineEdit()
-            self.is_cell_thr.setVisible(False)
-            self.is_cell_thr.setText('0.5')
-            self.is_cell_thr.setFixedWidth(50)
-             
+        self.import_recording_button = QPushButton("Browse…")
+        self.import_recording_button.clicked.connect(self._browse_sessions)
+        layout.addRow(session_hint, self.import_recording_button)
 
-            file_layout = QHBoxLayout()
-       
-            self.computer_file_list = QListWidget(self)
-            self.computer_file_list.setFixedHeight(200) 
-            self.move_to_computer_list = QPushButton("<-", self)
-            self.move_to_computer_list.clicked.connect(self.move_file_to_computer_list)
-            self.move_to_paths_list = QPushButton("->", self)
-            self.move_to_paths_list.clicked.connect(self.move_file_to_paths_list)
-            self.paths_list=QListWidget(self)
-            self.paths_list.setFixedHeight(200) 
-            
-            file_layout.addWidget(self.computer_file_list)
-            file_layout.addWidget(self.move_to_computer_list)
-            file_layout.addWidget(self.move_to_paths_list)
-            file_layout.addWidget(self.paths_list)
-            layout.addRow(instruction3, file_layout)
-            layout.addRow(instruction_format,self.format)
-            layout.addRow(instruction4,field_checkbox)
-            layout.addRow("suite2p iscell threshold:",self.is_cell_thr) 
-            
+        self.path_recording = QLabel("<i>No folder selected</i>")
+        self.path_recording.setTextFormat(Qt.RichText)
+        self.path_recording.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        layout.addRow("Selected parent folder:", self.path_recording)
 
-            instruction5=QLabel("Channel to use for registration (0 : functional, 1 : anatomical (if available))")
-            self.reg_chan= QLineEdit()
-            self.reg_chan.setFixedWidth(50)
-            self.reg_chan.setText('0')
-            layout.addRow(instruction5,self.reg_chan)
+        # ── Session list shuttle ─────────────────────────────────────────────
+        shuttle_hint = QLabel(
+            "Select sessions in the left list and press <b>→</b> to add them to the "
+            "track2p run (right list), in chronological order. Use <b>←</b> to remove."
+        )
+        shuttle_hint.setWordWrap(True)
 
-            trsfrm_type=QLabel("Choose the type of transformation to use for registration:")
-            self.trsfrm_type=QComboBox()
-            self.trsfrm_type.addItem("affine")
-            self.trsfrm_type.addItem("rigid")
-            self.trsfrm_type.setCurrentIndex(0)
-            layout.addRow(trsfrm_type,self.trsfrm_type)
+        self.computer_file_list = QListWidget()
+        self.computer_file_list.setFixedHeight(200)
+        self.paths_list = QListWidget()
+        self.paths_list.setFixedHeight(200)
 
-            # compute_iou=QLabel("iou_dist_thr:")
-            # self.compute_iou= QLineEdit()
-            # self.compute_iou.setFixedWidth(50)
-            # self.compute_iou.setText('16')
-            # layout.addRow(compute_iou,self.compute_iou)
+        btn_right = QPushButton("→")
+        btn_right.clicked.connect(self._move_to_run_list)
+        btn_left = QPushButton("←")
+        btn_left.clicked.connect(self._move_to_available_list)
 
-            thr_method=QLabel("Thresholding method for filtering IoU histogram:")
-            self.thr_method=QComboBox()
-            self.thr_method.addItem("min")
-            self.thr_method.addItem("otsu")
-            self.thr_method.setCurrentIndex(1)
-            layout.addRow(thr_method,self.thr_method)
-            
-            instruction6=QLabel("Import the directory where outputs will be saved (a 'track2p' sub-folder will be created):")
-            self.t2p_path_button = QPushButton("Import", self)
-            self.t2p_path_button.clicked.connect(self.save_directoy)
-            layout.addRow(instruction6,self.t2p_path_button)
-            
-            instruction7= QLabel("Path to access the output 'track2p' folder:")
-            instruction7.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            self.save_path=QLabel()
-            self.save_path.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            layout.addRow(instruction7,self.save_path)
-            
-            instruction8= QLabel("Save the outputs in suite2p format (containing cells tracked on all days):")
-            self.checkbox3 = QCheckBox(self)
-            layout.addRow(instruction8,self.checkbox3)
-            
+        arrow_col = QVBoxLayout()
+        arrow_col.addStretch()
+        arrow_col.addWidget(btn_right)
+        arrow_col.addWidget(btn_left)
+        arrow_col.addStretch()
 
-            self.run_button = QPushButton("Run", self)
-            self.run_button.clicked.connect(self.run)
-            layout.addRow("Run the algorithm:", self.run_button)
-            
-            terminal_intruction=QLabel("To monitor progress see outputs in the terminal where the GUI was launched from.")
-            layout.addRow(terminal_intruction)
-     
-    
-        def display_iscell(self,state):
-            if state == Qt.Checked:
-                self.is_cell_thr.setVisible(True)
-            else:
-                self.is_cell_thr.setVisible(False)
+        shuttle = QHBoxLayout()
+        shuttle.addWidget(self.computer_file_list)
+        shuttle.addLayout(arrow_col)
+        shuttle.addWidget(self.paths_list)
 
-        def display_suite2p_options(self):
-            if self.format.currentText() == "suite2p":
-                self.checkbox1.setVisible(True)
-                self.checkbox2.setVisible(True)
-                self.reg_chan.setVisible(True)
-                self.is_cell_thr.setVisible(self.checkbox2.isChecked())
-            else:
-                self.checkbox1.setVisible(False)
-                self.checkbox2.setVisible(False)
-                self.reg_chan.setVisible(False)
-                self.is_cell_thr.setVisible(False)
+        layout.addRow(shuttle_hint)
+        layout.addRow(shuttle)
 
-        def run(self):
-    
-            stored_all_ds_path = []
-            for i in range(self.paths_list.count()):
-                item=self.paths_list.item(i).data(Qt.UserRole)
-                item_universel=item.replace("\\", "/")
-                stored_all_ds_path.append(item_universel)
-            self.track_ops.all_ds_path= stored_all_ds_path
-            save_path=self.saved_directory
-            save_path=save_path.replace("\\", "/")
-            self.track_ops.save_path = save_path
-            self.track_ops.input_format = self.format.currentText()
-            self.track_ops.reg_chan=int(self.reg_chan.text())
-            self.track_ops.transform_type=self.trsfrm_type.currentText()
-            # self.track_ops.iou_dist_thr=int(self.compute_iou.text())
-            self.track_ops.thr_method=self.thr_method.currentText()
-            print("transformation type:", self.track_ops.transform_type)
-            print("iou_dist_thr:", self.track_ops.iou_dist_thr)
-            print("thr_method:", self.track_ops.thr_method)
-            if self.checkbox1.isChecked():
-                self.track_ops.iscell_thr=None
-            if self.checkbox2.isChecked():
-                self.track_ops.iscell_thr=float(self.is_cell_thr.text())
-            if self.checkbox3.isChecked():
-                self.track_ops.save_in_s2p_format=True
-            print("All parameters have been recorded ! The track2p algorithm is running...")
-            run_t2p(self.track_ops)
-            self.open_track2p_in_gui()
+        # ── Input format ─────────────────────────────────────────────────────
+        self.format_box = QComboBox()
+        self.format_box.addItems(["suite2p", "npy"])
+        self.format_box.currentIndexChanged.connect(self._on_format_changed)
+        layout.addRow("Input format:", self.format_box)
 
-    
-        def open_track2p_in_gui(self):
-            reply = QMessageBox.question(self, "", "Run completed successfully!\nDo you want to launch the gui?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        # ── suite2p ROI selection ────────────────────────────────────────────
+        self.checkbox_manual = QCheckBox("Manually curated (iscell == 1)")
+        self.checkbox_thr = QCheckBox("Probability threshold (iscell[:,1] > thr)")
+        self.checkbox_thr.stateChanged.connect(self._on_thr_toggled)
 
-            if reply == QMessageBox.Yes:
-                #print("Opening GUI...")
-                self.dialog = CustomDialog(self.main_window, self.saved_directory, self.reg_chan.text())
-                self.dialog.exec_()
-            if reply == QMessageBox.No:
-                pass
-        
-        def save_directoy(self):
-            saved_directory= QFileDialog.getExistingDirectory(self, "Select Directory")
-            if saved_directory:
-                self.saved_directory=saved_directory
-                self.save_path.setText(f'{self.saved_directory}')
-                
-        def import_path_to_recordings(self):
-            directory = QFileDialog.getExistingDirectory(self, "Select Directory")
-            self.saved_directory=directory
-            self.save_path.setText(f'{self.saved_directory}')
+        self.iscell_thr_box = QLineEdit("0.5")
+        self.iscell_thr_box.setFixedWidth(50)
+        self.iscell_thr_box.setToolTip("Minimum iscell probability to accept an ROI (0–1)")
+        self.iscell_thr_box.setVisible(False)
 
-            if directory:
-                self.path_recording.setText(f'{directory}')
-                self.computer_file_list.clear()
-                files= os.listdir(directory)
-                for file in sorted(files):
-                    full_path = os.path.join(directory, file)
-                    item=QListWidgetItem(file)
-                    item.setData(Qt.UserRole, full_path)
-                    self.computer_file_list.addItem(item)
+        roi_col = QVBoxLayout()
+        roi_col.addWidget(self.checkbox_manual)
+        roi_col.addWidget(self.checkbox_thr)
+        layout.addRow("ROI selection method:", roi_col)
+        layout.addRow("iscell probability threshold:", self.iscell_thr_box)
 
+        # ── Registration options ─────────────────────────────────────────────
+        self.reg_chan_box = QComboBox()
+        self.reg_chan_box.addItem("Functional (recommended)", RegChannel.FUNCTIONAL)
+        self.reg_chan_box.addItem("Anatomical", RegChannel.ANATOMICAL)
+        self.reg_chan_box.setToolTip("Select the channel used for registration")
 
-        def move_file_to_paths_list(self):
-            selected_items = self.computer_file_list.selectedItems()
-            for item in selected_items:
-                self.computer_file_list.takeItem(self.computer_file_list.row(item))
-                self.paths_list.addItem(item)
-     
+        layout.addRow("Registration channel:", self.reg_chan_box)
 
-        def move_file_to_computer_list(self):
-            selected_items = self.paths_list.selectedItems()
-            for item in selected_items:
-                self.paths_list.takeItem(self.paths_list.row(item))
+        self.transform_box = QComboBox()
+        self.transform_box.addItems(["affine", "rigid"])
+        layout.addRow("Registration transform:", self.transform_box)
+
+        self.thr_method_box = QComboBox()
+        self.thr_method_box.addItems(["min", "otsu"])
+        self.thr_method_box.setCurrentText("otsu")
+        self.thr_method_box.setToolTip("Method used to threshold the IoU histogram")
+        layout.addRow("IoU threshold method:", self.thr_method_box)
+
+        # ── Output folder ────────────────────────────────────────────────────
+        output_hint = QLabel(
+            "Select the folder where results will be saved. "
+            "A <code>track2p/</code> subfolder will be created inside it."
+        )
+        output_hint.setWordWrap(True)
+        output_hint.setTextFormat(Qt.RichText)
+
+        self.save_dir_button = QPushButton("Browse…")
+        self.save_dir_button.clicked.connect(self._browse_output)
+        layout.addRow(output_hint, self.save_dir_button)
+
+        self.save_path_label = QLabel("<i>No folder selected</i>")
+        self.save_path_label.setTextFormat(Qt.RichText)
+        self.save_path_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        layout.addRow("Output folder:", self.save_path_label)
+
+        # ── Misc options ─────────────────────────────────────────────────────
+        self.checkbox_s2p_format = QCheckBox()
+        layout.addRow(
+            "Also save matched cells in suite2p format (one file per session):",
+            self.checkbox_s2p_format,
+        )
+
+        # ── Run ──────────────────────────────────────────────────────────────
+        self.run_button = QPushButton("▶  Run track2p")
+        self.run_button.setFixedHeight(32)
+        self.run_button.clicked.connect(self._run)
+        layout.addRow(self.run_button)
+
+        layout.addRow(QLabel(
+            "<small><i>Progress is logged to the terminal where the GUI was launched.</i></small>"
+        ))
+
+    # ── slots ────────────────────────────────────────────────────────────────
+
+    def _browse_sessions(self):
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select the parent folder containing per-session suite2p subfolders",
+        )
+        if not directory:
+            return
+
+        root = Path(directory)
+        self.saved_directory = root
+        self.path_recording.setText(f"<code>{root}</code>")
+        self.save_path_label.setText(f"<code>{root}</code>")
+
+        self.computer_file_list.clear()
+        for subfolder in sorted(root.iterdir()):
+            if subfolder.is_dir():
+                item = QListWidgetItem(str(subfolder))
+                item.setData(Qt.UserRole, str(subfolder))
                 self.computer_file_list.addItem(item)
-    
 
+    def _browse_output(self):
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select the folder where the track2p/ output subfolder will be created",
+        )
+        if directory:
+            self.saved_directory = Path(directory)
+            self.save_path_label.setText(f"<code>{directory}</code>")
 
+    def _on_thr_toggled(self, state):
+        self.iscell_thr_box.setVisible(state == Qt.Checked)
+
+    def _on_format_changed(self):
+        is_s2p = self.format_box.currentText() == "suite2p"
+        for w in (self.checkbox_manual, self.checkbox_thr, self.reg_chan_box):
+            w.setVisible(is_s2p)
+        self.iscell_thr_box.setVisible(is_s2p and self.checkbox_thr.isChecked())
+
+    def _move_to_run_list(self):
+        for item in self.computer_file_list.selectedItems():
+            self.computer_file_list.takeItem(self.computer_file_list.row(item))
+            self.paths_list.addItem(item)
+
+    def _move_to_available_list(self):
+        for item in self.paths_list.selectedItems():
+            self.paths_list.takeItem(self.paths_list.row(item))
+            self.computer_file_list.addItem(item)
+
+    def _run(self):
+        self.track_ops.all_ds_path = [
+            self.paths_list.item(i).data(Qt.UserRole)
+            for i in range(self.paths_list.count())
+        ]
+        self.track_ops.save_path = str(self.saved_directory)
+        self.track_ops.input_format = self.format_box.currentText()
+
+        self.track_ops.reg_chan = self.reg_chan_box.currentData()
+
+        self.track_ops.transform_type = self.transform_box.currentText()
+        self.track_ops.thr_method = self.thr_method_box.currentText()
+        self.track_ops.save_in_s2p_format = self.checkbox_s2p_format.isChecked()
+
+        if self.checkbox_thr.isChecked():
+            self.track_ops.iscell_thr = float(self.iscell_thr_box.text())
+        else:
+            self.track_ops.iscell_thr = None
+
+        log.info(
+            "Starting track2p — transform=%s, thr_method=%s, iscell_thr=%s",
+            self.track_ops.transform_type,
+            self.track_ops.thr_method,
+            self.track_ops.iscell_thr,
+        )
+
+        run_t2p(self.track_ops)
+        self._offer_open_gui()
+
+    def _offer_open_gui(self):
+        reply = QMessageBox.question(
+            self,
+            "Run complete",
+            "Run completed successfully!\nOpen the results viewer?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply == QMessageBox.Yes:
+            self.dialog = CustomDialog(
+                self.main_window,
+                str(self.saved_directory),
+                self.reg_chan_box.currentText(),
+            )
+            self.dialog.exec_()

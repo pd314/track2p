@@ -3,11 +3,9 @@ from pathlib import Path
 
 
 def check_nplanes(track_ops):
-    folder = "suite2p" if track_ops.input_format == "suite2p" else "data_npy"
     all_nplanes = []
-
     for ds_path in map(Path, track_ops.all_ds_path):
-        n_planes = sum(1 for p in (ds_path / folder).iterdir() if p.name.startswith("plane"))
+        n_planes = sum(1 for p in ds_path.iterdir() if p.name.startswith("plane"))
         print(f"Found {n_planes} planes in {ds_path}")
         all_nplanes.append(n_planes)
 
@@ -24,19 +22,37 @@ def check_nplanes(track_ops):
 
 
 def _load_ops(ds_path: Path, plane: int) -> dict:
-    return np.load(ds_path / "suite2p" / f"plane{plane}" / "ops.npy", allow_pickle=True).item()
+    return np.load(ds_path / f"plane{plane}" / "ops.npy", allow_pickle=True).item()
 
 
-def load_all_imgs(track_ops):
-    all_ds_avg_ch1, all_ds_avg_ch2, all_ds_nchannels = [], [], []
+def load_all_imgs(track_ops, return_es=False):
+    all_ds_avg_ch1 = []
+    all_ds_avg_ch2 = []
+    all_ds_nchannels = []
+
+    if return_es:
+        all_ds_avg_ch1E = []
+        all_ds_avg_ch2E = []
 
     for ds_path in map(Path, track_ops.all_ds_path):
         plane_ops = [_load_ops(ds_path, i) for i in range(track_ops.nplanes)]
 
         nchannels = [ops["nchannels"] for ops in plane_ops]
-        avg_ch1   = [ops["meanImg"] for ops in plane_ops]
-        avg_ch2   = [
+
+        avg_ch1 = [ops["meanImg"] for ops in plane_ops]
+
+        avg_ch1E = [
+            ops["meanImgE"] if "meanImgE" in ops else None
+            for ops in plane_ops
+        ]
+
+        avg_ch2 = [
             ops["meanImg_chan2"] if n == 2 else None
+            for ops, n in zip(plane_ops, nchannels)
+        ]
+
+        avg_ch2E = [
+            ops["meanImgE_chan2"] if n == 2 and "meanImgE_chan2" in ops else None
             for ops, n in zip(plane_ops, nchannels)
         ]
 
@@ -47,9 +63,17 @@ def load_all_imgs(track_ops):
         all_ds_avg_ch2.append(avg_ch2)
         all_ds_nchannels.append(nchannels)
 
-    track_ops.all_ds_avg_ch1   = all_ds_avg_ch1
-    track_ops.all_ds_avg_ch2   = all_ds_avg_ch2
+        if return_es:
+            all_ds_avg_ch1E.append(avg_ch1E)
+            all_ds_avg_ch2E.append(avg_ch2E)
+
+    track_ops.all_ds_avg_ch1 = all_ds_avg_ch1
+    track_ops.all_ds_avg_ch2 = all_ds_avg_ch2
     track_ops.all_ds_nchannels = all_ds_nchannels
+
+    if return_es:
+        track_ops.all_ds_avg_ch1E = all_ds_avg_ch1E
+        track_ops.all_ds_avg_ch2E = all_ds_avg_ch2E
 
     if len(set(map(tuple, all_ds_nchannels))) != 1:
         raise ValueError(
@@ -59,7 +83,10 @@ def load_all_imgs(track_ops):
     track_ops.nchannels = all_ds_nchannels[0][0]
     print(f"Found {track_ops.nchannels} channels in all datasets")
 
-    return all_ds_avg_ch1, all_ds_avg_ch2
+    if return_es:
+        return all_ds_avg_ch1, all_ds_avg_ch2, all_ds_avg_ch1E, all_ds_avg_ch2E
+    else:
+        return all_ds_avg_ch1, all_ds_avg_ch2
 
 
 def load_all_ds_stat_iscell(track_ops):
@@ -72,8 +99,8 @@ def load_all_ds_stat_iscell(track_ops):
     return [
         [
             filter_stat(
-                np.load(Path(ds_path) / "suite2p" / f"plane{j}" / "stat.npy",   allow_pickle=True),
-                np.load(Path(ds_path) / "suite2p" / f"plane{j}" / "iscell.npy", allow_pickle=True),
+                np.load(Path(ds_path) / f"plane{j}" / "stat.npy", allow_pickle=True),
+                np.load(Path(ds_path) / f"plane{j}" / "iscell.npy", allow_pickle=True),
             )
             for j in range(track_ops.nplanes)
         ]
@@ -90,10 +117,7 @@ def load_all_ds_ops(track_ops):
 
 def load_all_ds_mean_img(track_ops, ch=1):
     img_key = "meanImg" if ch == 1 else "meanImg_chan2"
-    return [
-        [ops[img_key] for ops in ds_ops]
-        for ds_ops in load_all_ds_ops(track_ops)
-    ]
+    return [[ops[img_key] for ops in ds_ops] for ds_ops in load_all_ds_ops(track_ops)]
 
 
 def load_all_ds_centroids(all_ds_stat_iscell, track_ops):

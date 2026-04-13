@@ -333,10 +333,10 @@ def plot_allroi_match_multiplane(all_ds_mean_img, all_pl_match_mat, track_ops, c
                 idx_orig = all_pl_match_mat[plane_idx][neuron_idx, ds_idx] # neurons index in the original recording
                 cont = stat_ds_plane
 
-                cont_plot = ax.contour(all_roi_array[:,:,idx_orig], linewidths=0.5)
+                cont_plot = ax.contour(all_roi_array[:,:,idx_orig], linewidths=0.5, colors=[neuron_colors[i]])
 
-                for collection in cont_plot.collections:
-                    collection.set_edgecolor(neuron_colors[i])  # RGB value for red
+                # for collection in cont_plot.collections:
+                #     collection.set_edgecolor(neuron_colors[i])  # RGB value for red
         
         left_axs = axs[0] if track_ops.nplanes==1 else axs[plane_idx,0]
         left_axs.set_ylabel(f'plane{plane_idx} (n={len(neuron_ids)})')
