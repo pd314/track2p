@@ -6,11 +6,10 @@ import numpy as np
 import skimage
 from enum import IntEnum
 from ..logs import get_logger
+
 logger = get_logger(__name__)
 
-# =========================================================
-# ENUM
-# =========================================================
+
 class ImageMode(IntEnum):
     FUNC_MEAN = 0
     FUNC_MEAN_ENH = 1
@@ -18,9 +17,6 @@ class ImageMode(IntEnum):
     ANAT_MEAN_ENH = 3
 
 
-# =========================================================
-# SAFE PARSER
-# =========================================================
 def _parse_channel(channel):
     if channel is None:
         return ImageMode.FUNC_MEAN_ENH
@@ -34,21 +30,32 @@ def _parse_channel(channel):
         raise ValueError(f"Invalid channel value: {channel}")
 
 
-# =========================================================
-# WIDGET
-# =========================================================
 class CellPlotWidget(FigureCanvas):
-    '''This class is used to view and interact with the mean image of each recording (day)'''
+    """This class is used to view and interact with the mean image of each recording (day)"""
 
     cell_selected = Signal(int)
 
-    def __init__(self, tab=None, ops=None, stat_t2p=None, f_t2p=None,
-                 colors=None, update_selection_callback=None,
-                 all_f_t2p=None, all_stat_t2p=None, all_ops=None,
-                 initial_colors=None, channel=None):
+    def __init__(
+        self,
+        tab=None,
+        ops=None,
+        stat_t2p=None,
+        f_t2p=None,
+        colors=None,
+        update_selection_callback=None,
+        all_f_t2p=None,
+        all_stat_t2p=None,
+        all_ops=None,
+        initial_colors=None,
+        channel=None,
+    ):
 
         self.fig, self.ax_image = plt.subplots(1, 1)
-        self.fig.set_facecolor('black')
+        self.fig.set_facecolor("black")
+
+        self._is_panning = False
+        self._click_event = None
+
         super().__init__(self.fig)
 
         self.ops = ops
@@ -60,15 +67,12 @@ class CellPlotWidget(FigureCanvas):
         self.colors = colors
         self.initial_colors = initial_colors
 
-        # -----------------------------
-        # SAFE ENUM PARSING HERE
-        # -----------------------------
         self.channel = _parse_channel(channel)
 
         self.all_img, self.img = self.load_all_imgs()
 
         self.selected_cell_index = None
-        self.mpl_connect('button_press_event', self.on_mouse_press)
+        self.mpl_connect("button_press_event", self.on_mouse_press)
         self.update_selection_callback = update_selection_callback
 
         self.nb_cells = len(self.stat_t2p)
@@ -76,20 +80,15 @@ class CellPlotWidget(FigureCanvas):
         self.plot_cells()
         self.initialize_interactions()
 
-    # =========================================================
     def load_all_imgs(self):
-        logger.info('Loading all images')
-        logger.debug(f'Channel img: {self.channel}')
+        logger.info("Loading all images")
+        logger.debug(f"Channel img: {self.channel}")
 
         all_img = []
         img = None
 
-        # -------------------------
-        # FUNCTIONAL MODES
-        # -------------------------
         if self.channel in (ImageMode.FUNC_MEAN, ImageMode.FUNC_MEAN_ENH):
-
-            key = 'meanImg' if self.channel == ImageMode.FUNC_MEAN else 'meanImgE'
+            key = "meanImg" if self.channel == ImageMode.FUNC_MEAN else "meanImgE"
 
             if key not in self.ops:
                 logger.warning(f"Missing {key}")
@@ -101,12 +100,12 @@ class CellPlotWidget(FigureCanvas):
                 if key in ops:
                     all_img.append(ops[key])
 
-        # -------------------------
-        # ANATOMICAL MODES
-        # -------------------------
         elif self.channel in (ImageMode.ANAT_MEAN, ImageMode.ANAT_MEAN_ENH):
-
-            key = 'meanImg_chan2' if self.channel == ImageMode.ANAT_MEAN else 'meanImg_chan2E'
+            key = (
+                "meanImg_chan2"
+                if self.channel == ImageMode.ANAT_MEAN
+                else "meanImg_chan2E"
+            )
 
             if key not in self.ops:
                 logger.warning(f"Missing {key}")
@@ -124,51 +123,108 @@ class CellPlotWidget(FigureCanvas):
 
         return all_img, img
 
-    # =========================================================
+    def initialize_interactions(self):
+        self.cid_scroll = self.fig.canvas.mpl_connect("scroll_event", self.on_scroll)
+
+        self.cid_press = self.fig.canvas.mpl_connect(
+            "button_press_event", self.on_click
+        )
+
+        self.cid_release = self.fig.canvas.mpl_connect(
+            "button_release_event", self.on_release
+        )
+
+        self.cid_motion = self.fig.canvas.mpl_connect(
+            "motion_notify_event", self.on_motion
+        )
+
+        self.cid_dblclick = self.fig.canvas.mpl_connect(
+            "button_press_event", self.on_double_click
+        )
+
+        self.initial_xlim = self.ax_image.get_xlim()
+        self.initial_ylim = self.ax_image.get_ylim()
+
+    def on_click(self, event):
+        if event.inaxes != self.ax_image:
+            return
+
+        # start panning with left click
+        if event.button == 1:
+            self._is_panning = True
+            self._press_event = event
+
+    def on_release(self, event):
+        self._is_panning = False
+        self._press_event = None
+
+    def on_motion(self, event):
+        if not self._is_panning or self._press_event is None:
+            return
+
+        if event.inaxes != self.ax_image:
+            return
+
+        dx = event.xdata - self._press_event.xdata
+        dy = event.ydata - self._press_event.ydata
+
+        current_xlim = self.ax_image.get_xlim()
+        current_ylim = self.ax_image.get_ylim()
+
+        # shift view opposite to mouse movement
+        self.ax_image.set_xlim(current_xlim[0] - dx, current_xlim[1] - dx)
+        self.ax_image.set_ylim(current_ylim[0] - dy, current_ylim[1] - dy)
+
+        self.fig.canvas.draw_idle()
+
+        # update reference point for smooth dragging
+        self._press_event = event
+
+    def on_double_click(self, event):
+        if event.dblclick and event.inaxes == self.ax_image:
+            self.ax_image.set_xlim(self.initial_xlim)
+            self.ax_image.set_ylim(self.initial_ylim)
+            self.fig.canvas.draw_idle()
+
     def plot_cells(self):
         self.ax_image.clear()
 
         start = perf_counter()
 
         match_mean_img = skimage.exposure.match_histograms(
-            self.img,
-            self.all_img[-1],
-            channel_axis=None
+            self.img, self.all_img[-1], channel_axis=None
         )
 
-        self.ax_image.imshow(match_mean_img, cmap='gray')
+        self.ax_image.imshow(match_mean_img, cmap="gray")
 
         cell_count = 0
 
         for cell in range(self.nb_cells):
             bin_mask = np.zeros_like(self.img)
-            bin_mask[self.stat_t2p[cell]['ypix'],
-                     self.stat_t2p[cell]['xpix']] = 1
+            bin_mask[self.stat_t2p[cell]["ypix"], self.stat_t2p[cell]["xpix"]] = 1
 
             color_cell = self.colors[cell]
-            self.ax_image.contour(bin_mask, levels=[0.5],
-                                  colors=[color_cell], linewidths=1)
+            self.ax_image.contour(
+                bin_mask, levels=[0.5], colors=[color_cell], linewidths=1
+            )
             cell_count += 1
 
-        self.ax_image.axis('off')
-        logger.info(f'Time for plotting cells: {perf_counter()-start:.2f} seconds')
-        logger.info(f'Total cells plotted: {cell_count}')
+        self.ax_image.axis("off")
+        logger.info(f"Time for plotting cells: {perf_counter() - start:.2f} seconds")
+        logger.info(f"Total cells plotted: {cell_count}")
 
         self.draw()
 
-    # =========================================================
     def plot_cells_remix(self, keys):
         self.ax_image.clear()
 
         start = perf_counter()
 
         match_mean_img = skimage.exposure.match_histograms(
-            self.img,
-            self.all_img[-1],
-            channel_axis=None
+            self.img, self.all_img[-1], channel_axis=None
         )
 
-        self.ax_image.imshow(match_mean_img, cmap='gray')
+        self.ax_image.imshow(match_mean_img, cmap="gray")
 
         cell_count = 0
 
@@ -177,102 +233,96 @@ class CellPlotWidget(FigureCanvas):
                 continue
 
             bin_mask = np.zeros_like(self.img)
-            bin_mask[self.stat_t2p[cell]['ypix'],
-                     self.stat_t2p[cell]['xpix']] = 1
+            bin_mask[self.stat_t2p[cell]["ypix"], self.stat_t2p[cell]["xpix"]] = 1
 
             color_cell = self.colors[cell]
-            self.ax_image.contour(bin_mask, levels=[0.5],
-                                  colors=[color_cell], linewidths=1)
+            self.ax_image.contour(
+                bin_mask, levels=[0.5], colors=[color_cell], linewidths=1
+            )
             cell_count += 1
 
-        self.ax_image.axis('off')
+        self.ax_image.axis("off")
 
-        logger.info(f'Time for plotting cells: {perf_counter()-start:.2f} seconds')
-        logger.info(f'Total cells plotted: {cell_count}')
+        logger.info(f"Time for plotting cells: {perf_counter() - start:.2f} seconds")
+        logger.info(f"Total cells plotted: {cell_count}")
 
         self.draw()
 
-    # =========================================================
     def underline_cell_remix(self, colors):
 
         for cell in range(self.nb_cells):
             bin_mask = np.zeros_like(self.img)
-            bin_mask[self.stat_t2p[cell]['ypix'],
-                     self.stat_t2p[cell]['xpix']] = 1
+            bin_mask[self.stat_t2p[cell]["ypix"], self.stat_t2p[cell]["xpix"]] = 1
 
             color_cell = colors[cell]
-            self.ax_image.contour(bin_mask, levels=[0.5],
-                                  colors=[color_cell], linewidths=1)
+            self.ax_image.contour(
+                bin_mask, levels=[0.5], colors=[color_cell], linewidths=1
+            )
 
         self.draw()
 
-    # =========================================================
     def underline_cell(self, selected_cell_index):
         for cell in range(self.nb_cells):
             if cell == selected_cell_index:
                 bin_mask = np.zeros_like(self.img)
-                bin_mask[self.stat_t2p[cell]['ypix'],
-                         self.stat_t2p[cell]['xpix']] = 1
+                bin_mask[self.stat_t2p[cell]["ypix"], self.stat_t2p[cell]["xpix"]] = 1
 
                 color_cell = self.colors[cell]
-                self.ax_image.contour(bin_mask, levels=[0.5],
-                                      colors=[color_cell], linewidths=3)
+                self.ax_image.contour(
+                    bin_mask, levels=[0.5], colors=[color_cell], linewidths=3
+                )
 
         self.draw()
 
-    # =========================================================
     def remove_previous_underline(self):
         for collection in self.ax_image.collections:
             collection.set_linewidth(1)
 
-    # =========================================================
-    def initialize_interactions(self):
-        self.cid_scroll = self.fig.canvas.mpl_connect(
-            'scroll_event', self.on_scroll
-        )
-
-        self.initial_xlim = self.ax_image.get_xlim()
-        self.initial_ylim = self.ax_image.get_ylim()
-
-    # =========================================================
     def on_scroll(self, event):
         if event.inaxes == self.ax_image:
             current_xlim = self.ax_image.get_xlim()
             current_ylim = self.ax_image.get_ylim()
 
             base_scale = 0.9
-            scale_factor = base_scale if event.button == 'up' else 1/base_scale
+            scale_factor = base_scale if event.button == "up" else 1 / base_scale
 
             x_data, y_data = event.xdata, event.ydata
 
             new_xlim = [x_data - (x_data - x) * scale_factor for x in current_xlim]
             new_ylim = [y_data - (y_data - y) * scale_factor for y in current_ylim]
 
-            new_xlim = [max(self.initial_xlim[0],
-                            min(self.initial_xlim[1], x)) for x in new_xlim]
-            new_ylim = [max(self.initial_ylim[1],
-                            min(self.initial_ylim[0], y)) for y in new_ylim]
+            new_xlim = [
+                max(self.initial_xlim[0], min(self.initial_xlim[1], x))
+                for x in new_xlim
+            ]
+            new_ylim = [
+                max(self.initial_ylim[1], min(self.initial_ylim[0], y))
+                for y in new_ylim
+            ]
 
             self.ax_image.set_xlim(new_xlim)
             self.ax_image.set_ylim(new_ylim)
 
             self.fig.canvas.draw_idle()
 
-    # =========================================================
     def on_mouse_press(self, event):
+
+        if self._is_panning:
+            return
+
         start = perf_counter()
 
         if event.inaxes == self.ax_image:
             x, y = event.xdata, event.ydata
 
             for j, cell_info in enumerate(self.stat_t2p):
-                ypix = cell_info['ypix']
-                xpix = cell_info['xpix']
+                ypix = cell_info["ypix"]
+                xpix = cell_info["xpix"]
 
                 if np.any((xpix == int(x)) & (ypix == int(y))):
                     self.selected_cell_index = j
                     self.update_selection_callback(j)
-                    logger.info(f'Cell selected: {j}')
+                    logger.info(f"Cell selected: {j}")
                     break
 
-        logger.info(f'Time taken for update: {perf_counter()-start:.2f} seconds')
+        logger.info(f"Time taken for update: {perf_counter() - start:.2f} seconds")

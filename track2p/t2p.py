@@ -5,14 +5,27 @@ from pathlib import Path
 
 import logging
 
-from track2p.io.s2p_loaders import load_all_imgs, check_nplanes, load_all_ds_stat_iscell, load_all_ds_mean_img, load_all_ds_centroids
+from track2p.io.s2p_loaders import (
+    load_all_imgs,
+    check_nplanes,
+    load_all_ds_stat_iscell,
+    load_all_ds_mean_img,
+    load_all_ds_centroids,
+)
 from track2p.io.savers import npy_to_s2p, save_track_ops, save_all_pl_match_mat
 
 from track2p.register.loop import run_reg_loop, reg_all_ds_all_roi
 from track2p.register.utils import get_all_ds_img_for_reg, get_all_ref_nonref_inters
 
 from track2p.plot.progress import plot_all_planes
-from track2p.plot.output import plot_reg_img_output, plot_thr_met_hist, plot_n_matched_roi, plot_roi_reg_output, plot_roi_match_multiplane, plot_allroi_match_multiplane
+from track2p.plot.output import (
+    plot_reg_img_output,
+    plot_thr_met_hist,
+    plot_n_matched_roi,
+    plot_roi_reg_output,
+    plot_roi_match_multiplane,
+    plot_allroi_match_multiplane,
+)
 
 from track2p.match.loop import get_all_ds_assign, get_all_pl_match_mat
 import numpy as np
@@ -21,6 +34,7 @@ import pandas as pd
 
 from time import perf_counter
 from .logs import setup_logger
+
 logger = setup_logger(__name__)
 
 
@@ -56,7 +70,7 @@ def run_t2p(track_ops):
     )
 
     logger.info(f"Logging initialized → {log_file}")
-    
+
     # 2) Load data
     check_nplanes(track_ops)
 
@@ -64,7 +78,9 @@ def run_t2p(track_ops):
         logger.info("Converting suite2p .npy outputs to internal format...")
         npy_to_s2p(track_ops)
 
-    all_ds_avg_ch1, all_ds_avg_ch2, all_ds_avg_ch1E, all_ds_avg_ch2E = load_all_imgs(track_ops, return_es=True)
+    all_ds_avg_ch1, all_ds_avg_ch2, all_ds_avg_ch1E, all_ds_avg_ch2E = load_all_imgs(
+        track_ops, return_es=True
+    )
 
     # 3) Plot available planes for registration
     plot_all_planes(all_ds_avg_ch1, track_ops)
@@ -73,17 +89,27 @@ def run_t2p(track_ops):
 
     # 4) Register based on chosen channel
     logger.info("Starting registration...")
-    all_ds_ref_img, all_ds_mov_img = get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops)
-    all_ds_mov_img_reg, all_ds_reg_params = run_reg_loop(all_ds_ref_img, all_ds_mov_img, track_ops)
+    all_ds_ref_img, all_ds_mov_img = get_all_ds_img_for_reg(
+        all_ds_avg_ch1, all_ds_avg_ch2, track_ops
+    )
+    all_ds_mov_img_reg, all_ds_reg_params = run_reg_loop(
+        all_ds_ref_img, all_ds_mov_img, track_ops
+    )
     plot_reg_img_output(track_ops)
 
     # 5) Apply computed transform to all ROIs
     logger.info("Applying computed transforms to all ROIs...")
-    all_ds_all_roi_ref, all_ds_all_roi_mov, all_ds_all_roi_reg, all_ds_roi_counter = reg_all_ds_all_roi(all_ds_reg_params, track_ops)
+    all_ds_all_roi_ref, all_ds_all_roi_mov, all_ds_all_roi_reg, all_ds_roi_counter = (
+        reg_all_ds_all_roi(all_ds_reg_params, track_ops)
+    )
 
     # 6) Generate 'yellow intersection' plots
-    all_ds_ref_reg_inters = get_all_ref_nonref_inters(all_ds_all_roi_ref, all_ds_all_roi_reg, track_ops)
-    all_ds_ref_mov_inters = get_all_ref_nonref_inters(all_ds_all_roi_ref, all_ds_all_roi_mov, track_ops)
+    all_ds_ref_reg_inters = get_all_ref_nonref_inters(
+        all_ds_all_roi_ref, all_ds_all_roi_reg, track_ops
+    )
+    all_ds_ref_mov_inters = get_all_ref_nonref_inters(
+        all_ds_all_roi_ref, all_ds_all_roi_mov, track_ops
+    )
     track_ops.all_ds_ref_mov_inters = all_ds_ref_mov_inters
     track_ops.all_ds_ref_reg_inters = all_ds_ref_reg_inters
 
@@ -92,12 +118,16 @@ def run_t2p(track_ops):
 
     # 7) Optimal assignments for all dataset pairs
     logger.info("Computing optimal assignments for all dataset pairs...")
-    all_ds_assign, all_ds_assign_thr, all_ds_thr_met, all_ds_thr = get_all_ds_assign(track_ops, all_ds_all_roi_ref, all_ds_all_roi_reg)
+    all_ds_assign, all_ds_assign_thr, all_ds_thr_met, all_ds_thr = get_all_ds_assign(
+        track_ops, all_ds_all_roi_ref, all_ds_all_roi_reg
+    )
     plot_thr_met_hist(all_ds_thr_met, all_ds_thr, track_ops)
     plot_n_matched_roi(all_ds_thr_met, all_ds_thr, track_ops)
 
     # 8) Match matrices
-    all_pl_match_mat = get_all_pl_match_mat(all_ds_all_roi_ref, all_ds_assign_thr, track_ops)
+    all_pl_match_mat = get_all_pl_match_mat(
+        all_ds_all_roi_ref, all_ds_assign_thr, track_ops
+    )
 
     # 9) Save results
     logger.info("Saving results...")
@@ -113,21 +143,38 @@ def run_t2p(track_ops):
         save_in_s2p_format(track_ops)
 
     # 11) Plot results
-    logger.info("Finished with algorithm! Generating plots (this can take some time)...")
+    logger.info(
+        "Finished with algorithm! Generating plots (this can take some time)..."
+    )
     all_ds_stat_iscell = load_all_ds_stat_iscell(track_ops)
-    all_ds_centroids   = load_all_ds_centroids(all_ds_stat_iscell, track_ops)
-    all_ds_mean_img    = load_all_ds_mean_img(track_ops)
+    all_ds_centroids = load_all_ds_centroids(all_ds_stat_iscell, track_ops)
+    all_ds_mean_img = load_all_ds_mean_img(track_ops)
 
-    plot_roi_match_multiplane(all_ds_mean_img, all_ds_centroids, all_pl_match_mat, track_ops, win_size=track_ops.win_size)
+    plot_roi_match_multiplane(
+        all_ds_mean_img,
+        all_ds_centroids,
+        all_pl_match_mat,
+        track_ops,
+        win_size=track_ops.win_size,
+    )
     plot_allroi_match_multiplane(all_ds_mean_img, all_pl_match_mat, track_ops)
 
     if track_ops.nchannels == 2:
         all_ds_mean_img_ch2 = load_all_ds_mean_img(track_ops, ch=2)
-        plot_roi_match_multiplane(all_ds_mean_img_ch2, all_ds_centroids, all_pl_match_mat, track_ops, win_size=track_ops.win_size, ch=2)
-        plot_allroi_match_multiplane(all_ds_mean_img_ch2, all_pl_match_mat, track_ops, ch=2)
-    
+        plot_roi_match_multiplane(
+            all_ds_mean_img_ch2,
+            all_ds_centroids,
+            all_pl_match_mat,
+            track_ops,
+            win_size=track_ops.win_size,
+            ch=2,
+        )
+        plot_allroi_match_multiplane(
+            all_ds_mean_img_ch2, all_pl_match_mat, track_ops, ch=2
+        )
+
     end = perf_counter()
-    logger.info(f'All done! Total time: {end - start:.2f} seconds)')
+    logger.info(f"All done! Total time: {end - start:.2f} seconds)")
 
 
 def generate_suite2p_indices(track_ops):
@@ -135,7 +182,9 @@ def generate_suite2p_indices(track_ops):
     thr = track_ops.iscell_thr
 
     for plane in range(track_ops.nplanes):
-        t2p_match_mat = np.load(save_path / f"plane{plane}_match_mat.npy", allow_pickle=True)
+        t2p_match_mat = np.load(
+            save_path / f"plane{plane}_match_mat.npy", allow_pickle=True
+        )
 
         all_iscell = [
             np.load(_plane_path(ds_path, plane) / "iscell.npy", allow_pickle=True)
@@ -153,35 +202,54 @@ def generate_suite2p_indices(track_ops):
                     indexes.append(valid_indices[index_match])
             true_indices.append(indexes)
 
-        true_indices     = np.array([[int(x)   if x is not None else None  for x in row] for row in true_indices])
-        true_indices_nan = np.array([[float(x) if x is not None else np.nan for x in row] for row in true_indices])
+        true_indices = np.array(
+            [[int(x) if x is not None else None for x in row] for row in true_indices]
+        )
+        true_indices_nan = np.array(
+            [
+                [float(x) if x is not None else np.nan for x in row]
+                for row in true_indices
+            ]
+        )
 
-        np.save(save_path / f"plane{plane}_suite2p_indices.npy",     true_indices)
+        np.save(save_path / f"plane{plane}_suite2p_indices.npy", true_indices)
         np.save(save_path / f"plane{plane}_suite2p_indices_nan.npy", true_indices_nan)
-        scipy.io.savemat(str(save_path / f"plane{plane}_suite2p_indices.mat"), {"data": true_indices_nan})
+        scipy.io.savemat(
+            str(save_path / f"plane{plane}_suite2p_indices.mat"),
+            {"data": true_indices_nan},
+        )
 
         column_names = [Path(ds_path).name for ds_path in track_ops.all_ds_path]
         pd.DataFrame(true_indices, columns=column_names).to_csv(
             save_path / f"plane{plane}_suite2p_indices.csv",
-            index=False, sep=";", na_rep="NaN",
+            index=False,
+            sep=";",
+            na_rep="NaN",
         )
-        logger.info(f"Saved suite2p indices for plane {plane} in .npy, .mat, and .csv formats")
-        logger.debug(f"Data types - true_indices: {true_indices.dtype}, true_indices_nan: {true_indices_nan.dtype}")
-
+        logger.info(
+            f"Saved suite2p indices for plane {plane} in .npy, .mat, and .csv formats"
+        )
+        logger.debug(
+            f"Data types - true_indices: {true_indices.dtype}, true_indices_nan: {true_indices_nan.dtype}"
+        )
 
 
 def save_in_s2p_format(track_ops):
-    folderpath  = Path(track_ops.save_path)
-    track_ops   = SimpleNamespace(**np.load(folderpath / "track_ops.npy", allow_pickle=True).item())
-    thr         = track_ops.iscell_thr
+    folderpath = Path(track_ops.save_path)
+    track_ops = SimpleNamespace(
+        **np.load(folderpath / "track_ops.npy", allow_pickle=True).item()
+    )
+    thr = track_ops.iscell_thr
     two_channel = track_ops.nchannels == 2
 
     for j in range(track_ops.nplanes):
         logger.info(f"plane {j}")
 
-        t2p_match_mat = np.load(folderpath / f"plane{j}_match_mat.npy", allow_pickle=True)
-        matched_rows  = t2p_match_mat[~np.any(t2p_match_mat == None, axis=1)]  # noqa: E711
-        matched_idx   = matched_rows.astype(int)
+        t2p_match_mat = np.load(
+            folderpath / f"plane{j}_match_mat.npy", allow_pickle=True
+        )
+        matched_rows = t2p_match_mat[~np.any(t2p_match_mat == None, axis=1)]  # noqa: E711
+        matched_idx = matched_rows.astype(int)
 
         per_ds = []
         for i, ds_path in enumerate(track_ops.all_ds_path):
@@ -190,23 +258,29 @@ def save_in_s2p_format(track_ops):
             def npl(fname):
                 return np.load(pp / fname, allow_pickle=True)
 
-            ops    = npl("ops.npy").item()
-            stat   = npl("stat.npy")
-            f      = npl("F.npy")
-            fneu   = npl("Fneu.npy")
-            spks   = npl("spks.npy")
+            ops = npl("ops.npy").item()
+            stat = npl("stat.npy")
+            f = npl("F.npy")
+            fneu = npl("Fneu.npy")
+            spks = npl("spks.npy")
             iscell = npl("iscell.npy")
 
             mask = _cell_mask(iscell, thr)
 
-            arrays = dict(stat=stat[mask], f=f[mask], fneu=fneu[mask],
-                          spks=spks[mask], iscell=iscell[mask], ops=ops)
+            arrays = dict(
+                stat=stat[mask],
+                f=f[mask],
+                fneu=fneu[mask],
+                spks=spks[mask],
+                iscell=iscell[mask],
+                ops=ops,
+            )
 
             if two_channel:
                 arrays.update(
-                    f_chan2   = npl("F_chan2.npy")[mask],
-                    fneu_chan2= npl("Fneu_chan2.npy")[mask],
-                    redcell   = npl("redcell.npy")[mask],
+                    f_chan2=npl("F_chan2.npy")[mask],
+                    fneu_chan2=npl("Fneu_chan2.npy")[mask],
+                    redcell=npl("redcell.npy")[mask],
                 )
 
             idx = matched_idx[:, i]
@@ -219,14 +293,14 @@ def save_in_s2p_format(track_ops):
             plane_out.mkdir(parents=True, exist_ok=True)
 
             d = per_ds[i]
-            np.save(plane_out / "stat.npy",   d["stat"])
-            np.save(plane_out / "F.npy",      d["f"])
-            np.save(plane_out / "ops.npy",    d["ops"])
+            np.save(plane_out / "stat.npy", d["stat"])
+            np.save(plane_out / "F.npy", d["f"])
+            np.save(plane_out / "ops.npy", d["ops"])
             np.save(plane_out / "iscell.npy", d["iscell"])
-            np.save(plane_out / "Fneu.npy",   d["fneu"])
-            np.save(plane_out / "spks.npy",   d["spks"])
+            np.save(plane_out / "Fneu.npy", d["fneu"])
+            np.save(plane_out / "spks.npy", d["spks"])
 
             if two_channel:
-                np.save(plane_out / "F_chan2.npy",    d["f_chan2"])
+                np.save(plane_out / "F_chan2.npy", d["f_chan2"])
                 np.save(plane_out / "Fneu_chan2.npy", d["fneu_chan2"])
-                np.save(plane_out / "redcell.npy",    d["redcell"])
+                np.save(plane_out / "redcell.npy", d["redcell"])

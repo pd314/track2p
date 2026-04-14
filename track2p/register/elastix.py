@@ -3,6 +3,7 @@ import numpy as np
 from time import perf_counter
 
 from ..logs import get_logger
+
 logger = get_logger(__name__)
 
 
@@ -14,7 +15,9 @@ def _log_img_stats(name, img):
             f"min={np.min(img):.4f}, max={np.max(img):.4f}, mean={np.mean(img):.4f}"
         )
     except Exception:
-        logger.debug(f"{name} | shape={getattr(img, 'shape', None)} (stats unavailable)")
+        logger.debug(
+            f"{name} | shape={getattr(img, 'shape', None)} (stats unavailable)"
+        )
 
 
 def reg_img_elastix(ref_img, mov_img, track_ops):
@@ -37,7 +40,9 @@ def reg_img_elastix(ref_img, mov_img, track_ops):
         logger.debug("Building elastix parameter object")
         parameter_object = itk.ParameterObject.New()
 
-        parameter_map = parameter_object.GetDefaultParameterMap(track_ops.transform_type)
+        parameter_map = parameter_object.GetDefaultParameterMap(
+            track_ops.transform_type
+        )
 
         logger.debug(
             f"Parameter map created | type={track_ops.transform_type}, "
@@ -51,9 +56,7 @@ def reg_img_elastix(ref_img, mov_img, track_ops):
         t_reg0 = perf_counter()
 
         mov_img_reg_itk, reg_params = itk.elastix_registration_method(
-            ref_img_itk,
-            mov_img_itk,
-            parameter_object=parameter_object
+            ref_img_itk, mov_img_itk, parameter_object=parameter_object
         )
 
         t_reg1 = perf_counter()
@@ -73,10 +76,7 @@ def reg_img_elastix(ref_img, mov_img, track_ops):
         return mov_img_reg, reg_params
 
     except Exception as e:
-        logger.error(
-            "Elastix registration failed",
-            exc_info=True
-        )
+        logger.error("Elastix registration failed", exc_info=True)
         logger.error(f"Transform type: {track_ops.transform_type}")
         logger.error(f"Ref shape: {getattr(ref_img, 'shape', None)}")
         logger.error(f"Mov shape: {getattr(mov_img, 'shape', None)}")
@@ -123,21 +123,15 @@ def itk_reg_all_roi(all_roi, reg_params):
     t0 = perf_counter()
 
     for i in range(n_rois):
-
-        logger.debug(f"ROI {i+1}/{n_rois}")
+        logger.debug(f"ROI {i + 1}/{n_rois}")
 
         try:
-            all_roi_array_reg[:, :, i] = itk_reg_roi(
-                all_roi[:, :, i],
-                reg_params
-            )
+            all_roi_array_reg[:, :, i] = itk_reg_roi(all_roi[:, :, i], reg_params)
 
         except Exception:
             logger.error(f"Failed ROI index={i}", exc_info=True)
             raise
 
-    logger.info(
-        f"ROI stack done | n={n_rois} | time={perf_counter() - t0:.2f}s"
-    )
+    logger.info(f"ROI stack done | n={n_rois} | time={perf_counter() - t0:.2f}s")
 
     return all_roi_array_reg

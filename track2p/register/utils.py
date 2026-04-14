@@ -52,29 +52,24 @@ def get_all_ds_img_for_reg(all_ds_avg_ch1, all_ds_avg_ch2, track_ops):
     n_pairs = len(track_ops.all_ds_path) - 1
 
     for i in range(n_pairs):
-
-        logger.debug(f"[PAIR BUILD] {i+1}/{n_pairs}")
+        logger.debug(f"[PAIR BUILD] {i + 1}/{n_pairs}")
 
         ds_ref_img = []
         ds_mov_img = []
 
         for j in range(track_ops.nplanes):
-
             try:
                 ref_img = all_ds_avg[i][j]
                 mov_img = all_ds_avg[i + 1][j]
 
                 _log_img_info(f"ref ds={i} plane={j}", ref_img)
-                _log_img_info(f"mov ds={i+1} plane={j}", mov_img)
+                _log_img_info(f"mov ds={i + 1} plane={j}", mov_img)
 
                 ds_ref_img.append(ref_img)
                 ds_mov_img.append(mov_img)
 
             except Exception:
-                logger.error(
-                    f"[PAIR BUILD FAIL] ds={i}, plane={j}",
-                    exc_info=True
-                )
+                logger.error(f"[PAIR BUILD FAIL] ds={i}, plane={j}", exc_info=True)
                 raise
 
         all_ds_ref_img.append(ds_ref_img)
@@ -117,8 +112,7 @@ def get_ref_reg_inters(all_roi_array_ref, all_roi_array_nonref):
 
         # RGB visualization
         ref_reg_inters = np.ones(
-            (inters.shape[0], inters.shape[1], 3),
-            dtype=np.float32
+            (inters.shape[0], inters.shape[1], 3), dtype=np.float32
         )
 
         ref_reg_inters[:, :, 1] -= inters / 6.0
@@ -132,9 +126,7 @@ def get_ref_reg_inters(all_roi_array_ref, all_roi_array_nonref):
 
 
 def get_all_ref_nonref_inters(
-    all_ds_all_roi_array_ref,
-    all_ds_all_roi_array_nonref,
-    track_ops
+    all_ds_all_roi_array_ref, all_ds_all_roi_array_nonref, track_ops
 ):
 
     logger.info("Computing all reference/non-reference ROI intersections")
@@ -146,15 +138,13 @@ def get_all_ref_nonref_inters(
 
     try:
         for i in range(n_pairs):
-
             t_pair = perf_counter()
 
-            logger.debug(f"[PAIR] {i+1}/{n_pairs}")
+            logger.debug(f"[PAIR] {i + 1}/{n_pairs}")
 
             ds_all_ref_nonref_inters = []
 
             for j in range(track_ops.nplanes):
-
                 try:
                     ref = all_ds_all_roi_array_ref[i][j]
                     nonref = all_ds_all_roi_array_nonref[i][j]
@@ -170,14 +160,11 @@ def get_all_ref_nonref_inters(
 
                 except Exception:
                     logger.error(
-                        f"[INTERSECTION FAIL] pair={i}, plane={j}",
-                        exc_info=True
+                        f"[INTERSECTION FAIL] pair={i}, plane={j}", exc_info=True
                     )
                     raise
 
-            logger.debug(
-                f"[PAIR DONE] {i} | time={perf_counter() - t_pair:.2f}s"
-            )
+            logger.debug(f"[PAIR DONE] {i} | time={perf_counter() - t_pair:.2f}s")
 
             all_ds_all_ref_nonref_inters.append(ds_all_ref_nonref_inters)
 

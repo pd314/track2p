@@ -1,4 +1,5 @@
-from qtpy.QtWidgets import QToolBar,QMenu,QAction,QToolButton
+from qtpy.QtWidgets import QToolBar, QMenu, QAction, QToolButton
+
 
 class Toolbar(QToolBar):
     def __init__(self, main_window):
@@ -19,7 +20,9 @@ class Toolbar(QToolBar):
 
         track2p_action = QAction("Run track2p algorithm (⌘R or Ctrl+R)", self)
         track2p_action.setShortcut("Ctrl+R")
-        track2p_action.triggered.connect(self.main_window.window_manager.open_track2p_wd)
+        track2p_action.triggered.connect(
+            self.main_window.window_manager.open_track2p_wd
+        )
         run_menu.addAction(track2p_action)
 
         raster_action = QAction("Generate raster plot (⌘G or Ctrl+G)", self)
@@ -38,5 +41,3 @@ class Toolbar(QToolBar):
         button.setPopupMode(QToolButton.InstantPopup)
         button.setStyleSheet("font-size: 13px")
         self.addWidget(button)
-        
-    

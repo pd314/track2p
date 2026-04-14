@@ -2,7 +2,9 @@ import numpy as np
 from pathlib import Path
 
 from ..logs import get_logger
-logger = get_logger(__name__) 
+
+logger = get_logger(__name__)
+
 
 def save_track_ops(track_ops):
     # remove attributes taking a lot of memory (e.g. rois etc.)

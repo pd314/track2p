@@ -2,6 +2,7 @@ import logging
 import sys
 from pathlib import Path
 
+
 def setup_logger(
     name: str = "app",
     log_file: str | Path | None = None,

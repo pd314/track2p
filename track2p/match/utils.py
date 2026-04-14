@@ -57,7 +57,6 @@ def filt_non_overlap(all_roi1, all_roi2, cent_dist_mat):
     filt_inds_ref = []
 
     for i in range(all_roi1.shape[2]):
-
         roi = all_roi1[:, :, i]
 
         closest_roi_idx = np.argmin(cent_dist_mat[i, :])
@@ -70,9 +69,7 @@ def filt_non_overlap(all_roi1, all_roi2, cent_dist_mat):
 
     all_inds_filt = all_inds[~np.isin(all_inds, filt_inds_ref)]
 
-    logger.debug(
-        f"Filtered ROIs: kept={len(all_inds_filt)}/{len(all_inds)}"
-    )
+    logger.debug(f"Filtered ROIs: kept={len(all_inds_filt)}/{len(all_inds)}")
 
     return all_inds_filt
 
@@ -102,25 +99,20 @@ def get_cost_mat(all_roi_ref, all_roi_reg, track_ops):
     logger.debug(f"Computing cost matrix | method={track_ops.matching_method}")
 
     # compute distances
-    if track_ops.matching_method == 'cent':
-
+    if track_ops.matching_method == "cent":
         cost_mat = get_cent_dist_mat(all_roi_ref, all_roi_reg)
 
         all_inds_ref_filt = np.arange(all_roi_ref.shape[2])
         all_inds_reg_filt = np.arange(all_roi_reg.shape[2])
 
-    elif track_ops.matching_method == 'cent_int-filt':
-
-        cost_mat, all_inds_ref_filt, all_inds_reg_filt = (
-            get_cent_dist_mat_non_overlap(all_roi_ref, all_roi_reg)
+    elif track_ops.matching_method == "cent_int-filt":
+        cost_mat, all_inds_ref_filt, all_inds_reg_filt = get_cent_dist_mat_non_overlap(
+            all_roi_ref, all_roi_reg
         )
 
-    elif track_ops.matching_method == 'iou':
-
+    elif track_ops.matching_method == "iou":
         cost_mat = 1 - get_cross_iou_mat(
-            all_roi_ref,
-            all_roi_reg,
-            dist_thr=track_ops.iou_dist_thr
+            all_roi_ref, all_roi_reg, dist_thr=track_ops.iou_dist_thr
         )
 
         all_inds_ref_filt = np.arange(all_roi_ref.shape[2])
@@ -128,7 +120,7 @@ def get_cost_mat(all_roi_ref, all_roi_reg, track_ops):
 
     else:
         logger.error(f"Matching method not implemented: {track_ops.matching_method}")
-        raise Exception('Matching method not implemented')
+        raise Exception("Matching method not implemented")
 
     logger.debug(
         f"cost_mat stats | shape={cost_mat.shape}, "
@@ -145,7 +137,6 @@ def get_iou(all_roi_ref, all_roi_reg):
     ious = []
 
     for i in range(all_roi_ref.shape[2]):
-
         roi_ref = all_roi_ref[:, :, i]
         roi_reg = all_roi_reg[:, :, i]
 
@@ -167,25 +158,16 @@ def get_cross_iou_mat(all_roi_ref, all_roi_reg, dist_thr=16):
 
     distances = get_cent_dist_mat(all_roi_ref, all_roi_reg)
 
-    cross_iou_mat = np.zeros(
-        (all_roi_ref.shape[2], all_roi_reg.shape[2])
-    )
+    cross_iou_mat = np.zeros((all_roi_ref.shape[2], all_roi_reg.shape[2]))
 
     for i in range(all_roi_ref.shape[2]):
         for j in range(all_roi_reg.shape[2]):
-
             if distances[i, j] > dist_thr:
                 continue
 
-            intersection = np.logical_and(
-                all_roi_ref[:, :, i],
-                all_roi_reg[:, :, j]
-            )
+            intersection = np.logical_and(all_roi_ref[:, :, i], all_roi_reg[:, :, j])
 
-            union = np.logical_or(
-                all_roi_ref[:, :, i],
-                all_roi_reg[:, :, j]
-            )
+            union = np.logical_or(all_roi_ref[:, :, i], all_roi_reg[:, :, j])
 
             union_sum = np.sum(union)
 
@@ -204,17 +186,14 @@ def init_all_pl_match_mat(all_ds_all_roi_ref, all_ds_assign_thr, track_ops):
     all_pl_match_mat = []
 
     for i in range(track_ops.nplanes):
-
         pl_match_mat = np.full(
-            (all_ds_all_roi_ref[0][i].shape[2], len(track_ops.all_ds_path)),
-            None
+            (all_ds_all_roi_ref[0][i].shape[2], len(track_ops.all_ds_path)), None
         )
 
         all_pl_match_mat.append(pl_match_mat)
 
     # populate first row of the match matrices with the matches from the first ref-reg pair
     for i in range(track_ops.nplanes):
-
         pl_match_mat = all_pl_match_mat[i]
         assign_thr = all_ds_assign_thr[0][i]
 

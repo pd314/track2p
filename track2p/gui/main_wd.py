@@ -8,10 +8,10 @@ from qtpy.QtWidgets import QApplication, QMainWindow
 from qtpy.QtCore import QObject, QThread, Signal
 
 from ..logs import get_logger
+
 logger = get_logger(__name__)
-# =========================================================
-# WORKER (ALL HEAVY WORK HAPPENS HERE)
-# =========================================================
+
+
 class InitWorker(QObject):
     finished = Signal(object)
     progress = Signal(str)
@@ -40,17 +40,10 @@ class InitWorker(QObject):
             self.finished.emit(None)
 
 
-# =========================================================
-# MAIN WINDOW
-# =========================================================
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
 
-        # -----------------------------
-        # UI-ONLY SETUP (FAST)
-        # -----------------------------
         self.window_manager = WindowManager(self)
 
         self.central_widget = CentralWidget(self)
@@ -65,7 +58,6 @@ class MainWindow(QMainWindow):
         # start heavy init in background
         self.start_background_init()
 
-    # =========================================================
     def initUI(self):
 
         self.setStyleSheet(
@@ -90,13 +82,10 @@ class MainWindow(QMainWindow):
         self.addToolBar(self.toolbar)
         self.setStatusBar(self.status_bar)
 
-        QApplication.setStyle('Cleanlooks')
+        QApplication.setStyle("Cleanlooks")
 
         self.showMaximized()
 
-    # =========================================================
-    # THREAD START
-    # =========================================================
     def start_background_init(self):
 
         self.thread = QThread()
@@ -120,16 +109,10 @@ class MainWindow(QMainWindow):
 
         self.thread.start()
 
-    # =========================================================
-    # PROGRESS CALLBACK (optional)
-    # =========================================================
     def on_init_progress(self, msg: str):
         logger.debug(f"[Init] {msg}")
         self.statusBar().showMessage(msg)
 
-    # =========================================================
-    # THREAD FINISHED CALLBACK
-    # =========================================================
     def on_background_done(self, data_management):
 
         logger.debug("[MainWindow] background init complete")
@@ -140,9 +123,6 @@ class MainWindow(QMainWindow):
 
         self.data_management = data_management
 
-        # -------------------------------------------------
-        # NOW SAFE TO CONNECT DATA TO UI
-        # -------------------------------------------------
         if hasattr(self.central_widget, "set_data_management"):
             self.central_widget.set_data_management(data_management)
 

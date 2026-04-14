@@ -18,12 +18,10 @@ def run_reg_loop(all_ds_ref_img, all_ds_mov_img, track_ops):
 
     try:
         for i, ds_ref_img in enumerate(all_ds_ref_img):
-
             t_ds = perf_counter()
 
             logger.info(
-                f"Dataset {i+1}/{len(all_ds_ref_img)} | "
-                f"n_planes={track_ops.nplanes}"
+                f"Dataset {i + 1}/{len(all_ds_ref_img)} | n_planes={track_ops.nplanes}"
             )
 
             ds_mov_img = all_ds_mov_img[i]
@@ -31,7 +29,6 @@ def run_reg_loop(all_ds_ref_img, all_ds_mov_img, track_ops):
             ds_reg_params = []
 
             for j in range(track_ops.nplanes):
-
                 t_plane = perf_counter()
 
                 try:
@@ -45,9 +42,7 @@ def run_reg_loop(all_ds_ref_img, all_ds_mov_img, track_ops):
                     )
 
                     mov_img_reg, reg_params = reg_img_elastix(
-                        ref_img,
-                        mov_img,
-                        track_ops
+                        ref_img, mov_img, track_ops
                     )
 
                     ds_mov_img_reg.append(mov_img_reg)
@@ -59,15 +54,10 @@ def run_reg_loop(all_ds_ref_img, all_ds_mov_img, track_ops):
                     )
 
                 except Exception:
-                    logger.error(
-                        f"[REG FAIL] ds={i}, plane={j}",
-                        exc_info=True
-                    )
+                    logger.error(f"[REG FAIL] ds={i}, plane={j}", exc_info=True)
                     raise
 
-            logger.info(
-                f"Dataset {i} done | time={perf_counter() - t_ds:.2f}s"
-            )
+            logger.info(f"Dataset {i} done | time={perf_counter() - t_ds:.2f}s")
 
             all_ds_mov_img_reg.append(ds_mov_img_reg)
             all_ds_reg_params.append(ds_reg_params)
@@ -100,15 +90,13 @@ def reg_all_ds_all_roi(all_ds_reg_params, track_ops):
 
     try:
         for i in range(n_pairs):
-
             t_ds = perf_counter()
 
             ref_ds_path = track_ops.all_ds_path[i]
             reg_ds_path = track_ops.all_ds_path[i + 1]
 
             logger.info(
-                f"[ROI] Pair {i+1}/{n_pairs} | "
-                f"ref={ref_ds_path} → mov={reg_ds_path}"
+                f"[ROI] Pair {i + 1}/{n_pairs} | ref={ref_ds_path} → mov={reg_ds_path}"
             )
 
             ds_all_roi_array_ref = []
@@ -119,7 +107,6 @@ def reg_all_ds_all_roi(all_ds_reg_params, track_ops):
             ds_roi_counter_mov = []
 
             for j in range(track_ops.nplanes):
-
                 t_plane = perf_counter()
 
                 try:
@@ -128,15 +115,11 @@ def reg_all_ds_all_roi(all_ds_reg_params, track_ops):
                     logger.debug(f"[LOAD] ds_pair={i}, plane={j}")
 
                     stat_ref, roi_counter_ref = load_stat_ds_plane(
-                        ref_ds_path,
-                        track_ops,
-                        plane_idx=j
+                        ref_ds_path, track_ops, plane_idx=j
                     )
 
                     stat_mov, roi_counter_mov = load_stat_ds_plane(
-                        reg_ds_path,
-                        track_ops,
-                        plane_idx=j
+                        reg_ds_path, track_ops, plane_idx=j
                     )
 
                     all_roi_array_ref = get_all_roi_array_from_stat(stat_ref, track_ops)
@@ -152,10 +135,7 @@ def reg_all_ds_all_roi(all_ds_reg_params, track_ops):
 
                     t_roi = perf_counter()
 
-                    all_roi_array_reg = itk_reg_all_roi(
-                        all_roi_array_mov,
-                        reg_params
-                    )
+                    all_roi_array_reg = itk_reg_all_roi(all_roi_array_mov, reg_params)
 
                     logger.debug(
                         f"[TRANSFORM OK] ds={i}, plane={j} | "
@@ -175,15 +155,10 @@ def reg_all_ds_all_roi(all_ds_reg_params, track_ops):
                     )
 
                 except Exception:
-                    logger.error(
-                        f"[ROI FAIL] ds_pair={i}, plane={j}",
-                        exc_info=True
-                    )
+                    logger.error(f"[ROI FAIL] ds_pair={i}, plane={j}", exc_info=True)
                     raise
 
-            logger.info(
-                f"[PAIR DONE] {i} | time={perf_counter() - t_ds:.2f}s"
-            )
+            logger.info(f"[PAIR DONE] {i} | time={perf_counter() - t_ds:.2f}s")
 
             all_ds_all_roi_array_ref.append(ds_all_roi_array_ref)
             all_ds_all_roi_array_mov.append(ds_all_roi_array_mov)
@@ -207,7 +182,7 @@ def reg_all_ds_all_roi(all_ds_reg_params, track_ops):
             all_ds_all_roi_array_ref,
             all_ds_all_roi_array_mov,
             all_ds_all_roi_array_reg,
-            all_ds_roi_counter
+            all_ds_roi_counter,
         )
 
     except Exception:

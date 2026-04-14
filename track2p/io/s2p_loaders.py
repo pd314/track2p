@@ -2,7 +2,9 @@ import numpy as np
 from pathlib import Path
 
 from ..logs import get_logger
+
 logger = get_logger(__name__)
+
 
 def check_nplanes(track_ops):
     all_nplanes = []
@@ -43,10 +45,7 @@ def load_all_imgs(track_ops, return_es=False):
 
         avg_ch1 = [ops["meanImg"] for ops in plane_ops]
 
-        avg_ch1E = [
-            ops["meanImgE"] if "meanImgE" in ops else None
-            for ops in plane_ops
-        ]
+        avg_ch1E = [ops["meanImgE"] if "meanImgE" in ops else None for ops in plane_ops]
 
         avg_ch2 = [
             ops["meanImg_chan2"] if n == 2 else None

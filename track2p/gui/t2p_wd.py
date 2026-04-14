@@ -3,9 +3,20 @@ from pathlib import Path
 from enum import IntEnum
 
 from qtpy.QtWidgets import (
-    QWidget, QPushButton, QFileDialog, QLineEdit, QLabel,
-    QFormLayout, QListWidget, QMessageBox, QListWidgetItem,
-    QCheckBox, QSizePolicy, QComboBox, QVBoxLayout, QHBoxLayout,
+    QWidget,
+    QPushButton,
+    QFileDialog,
+    QLineEdit,
+    QLabel,
+    QFormLayout,
+    QListWidget,
+    QMessageBox,
+    QListWidgetItem,
+    QCheckBox,
+    QSizePolicy,
+    QComboBox,
+    QVBoxLayout,
+    QHBoxLayout,
 )
 from qtpy.QtCore import Qt
 
@@ -14,6 +25,7 @@ from track2p.ops.default import DefaultTrackOps
 from track2p.gui.custom_wd import CustomDialog
 
 from ..logs import get_logger
+
 logger = get_logger(__name__)
 
 
@@ -98,7 +110,9 @@ class Track2pWindow(QWidget):
 
         self.iscell_thr_box = QLineEdit("0.5")
         self.iscell_thr_box.setFixedWidth(50)
-        self.iscell_thr_box.setToolTip("Minimum iscell probability to accept an ROI (0–1)")
+        self.iscell_thr_box.setToolTip(
+            "Minimum iscell probability to accept an ROI (0–1)"
+        )
         self.iscell_thr_box.setVisible(False)
 
         roi_col = QVBoxLayout()
@@ -155,9 +169,11 @@ class Track2pWindow(QWidget):
         self.run_button.clicked.connect(self._run)
         layout.addRow(self.run_button)
 
-        layout.addRow(QLabel(
-            "<small><i>Progress is logged to the terminal where the GUI was launched.</i></small>"
-        ))
+        layout.addRow(
+            QLabel(
+                "<small><i>Progress is logged to the terminal where the GUI was launched.</i></small>"
+            )
+        )
 
     # ── slots ────────────────────────────────────────────────────────────────
 

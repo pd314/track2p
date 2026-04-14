@@ -1,7 +1,11 @@
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QTabWidget, QVBoxLayout, QWidget, QSplitter,
-    QHBoxLayout, QFrame
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+    QSplitter,
+    QHBoxLayout,
+    QFrame,
 )
 
 from track2p.gui.fluo_plot import FluorescencePlotWidget
@@ -10,13 +14,11 @@ from track2p.gui.cell_plot import CellPlotWidget
 from track2p.gui.data_management import DataManagement
 
 from ..logs import get_logger
+
 logger = get_logger(__name__)
 
-class CentralWidget(QWidget):
 
-    # =========================================================
-    # ENUM (IMAGE MODE SELECTOR)
-    # =========================================================
+class CentralWidget(QWidget):
     class ImageMode:
         FUNC_MEAN = 0
         FUNC_MEAN_ENH = 1
@@ -36,9 +38,6 @@ class CentralWidget(QWidget):
 
         self.data_management = DataManagement(self)
 
-        # -----------------------------------------------------
-        # DEFAULT IMAGE MODE (IMPORTANT)
-        # -----------------------------------------------------
         self.image_mode = self.ImageMode.FUNC_MEAN_ENH
 
         # NEVER assume it is valid yet
@@ -46,7 +45,6 @@ class CentralWidget(QWidget):
 
         self.init_central_widget()
 
-    # =========================================================
     def init_central_widget(self):
 
         self.top = QFrame()
@@ -76,7 +74,6 @@ class CentralWidget(QWidget):
         layout.addWidget(self.splitter3)
         self.setLayout(layout)
 
-    # =========================================================
     def create_mean_img(self, channel):
 
         # allow override later (or ignore parameter)
@@ -97,7 +94,7 @@ class CentralWidget(QWidget):
                 update_selection_callback=self.update_selection,
                 all_f_t2p=self.data_management.all_f_t2p,
                 all_ops=self.data_management.all_ops,
-                channel=self.image_mode
+                channel=self.image_mode,
             )
 
             layout = QVBoxLayout(tab)
@@ -107,7 +104,6 @@ class CentralWidget(QWidget):
             self.tabs.addTab(tab, f"Day {i + 1}")
             self.cell_plot.cell_selected.connect(self.update_selection)
 
-    # =========================================================
     def create_mean_img_from_curation(self):
         import_window = self.main_window.window_manager.import_window
         t2p_window = self.main_window.window_manager.t2p_window
@@ -117,7 +113,7 @@ class CentralWidget(QWidget):
                 import_window.path_to_t2p,
                 import_window.plane,
                 import_window.trace_type,
-                import_window.channel
+                import_window.channel,
             )
 
         elif t2p_window is not None and t2p_window.saved_directory is not None:
@@ -125,13 +121,14 @@ class CentralWidget(QWidget):
                 t2p_window.saved_directory,
                 t2p_window.dialog.plane,
                 t2p_window.dialog.trace_type,
-                t2p_window.dialog.channel
+                t2p_window.dialog.channel,
             )
 
         else:
-            logger.warning("Both import_window and t2p_window are not initialized. Cannot create mean image from curation.")
+            logger.warning(
+                "Both import_window and t2p_window are not initialized. Cannot create mean image from curation."
+            )
 
-    # =========================================================
     def clear(self):
         self.data_management.reset_attributes()
 
@@ -148,7 +145,6 @@ class CentralWidget(QWidget):
         while self.tabs.count():
             self.tabs.removeTab(0)
 
-    # =========================================================
     def update_selection(self, selected_cell_index):
 
         self.selected_roi = selected_cell_index
@@ -178,7 +174,7 @@ class CentralWidget(QWidget):
             self.fluorescences_plotting = FluorescencePlotWidget(
                 all_f_t2p=self.data_management.all_f_t2p,
                 all_ops=self.data_management.all_ops,
-                colors=self.data_management.colors
+                colors=self.data_management.colors,
             )
             self.top_layout_right.addWidget(self.fluorescences_plotting)
 
@@ -189,14 +185,13 @@ class CentralWidget(QWidget):
                 colors=self.data_management.colors,
                 all_iscell_t2p=self.data_management.all_iscell,
                 t2p_match_mat_allday=self.data_management.t2p_match_mat_allday,
-                track_ops=self.data_management.track_ops
+                track_ops=self.data_management.track_ops,
             )
             self.top_layout.addWidget(self.rois_plotting)
 
         self.fluorescences_plotting.display_all_f_t2p(selected_cell_index)
         self.rois_plotting.display_zooms(selected_cell_index)
 
-    # =========================================================
     def display_first_ROI(self, index):
 
         tab_widget = self.tabs.widget(0)
@@ -211,7 +206,7 @@ class CentralWidget(QWidget):
                 all_f_t2p=self.data_management.all_f_t2p,
                 all_ops=self.data_management.all_ops,
                 colors=self.data_management.colors,
-                all_stat_t2p=self.data_management.all_stat_t2p
+                all_stat_t2p=self.data_management.all_stat_t2p,
             )
             self.top_layout_right.addWidget(self.fluorescences_plotting)
 
@@ -223,7 +218,7 @@ class CentralWidget(QWidget):
                 all_iscell_t2p=self.data_management.all_iscell,
                 t2p_match_mat_allday=self.data_management.t2p_match_mat_allday,
                 track_ops=self.data_management.track_ops,
-                imgs=self.cell_plot.all_img if self.cell_plot else None
+                imgs=self.cell_plot.all_img if self.cell_plot else None,
             )
             self.top_layout.addWidget(self.rois_plotting)
 

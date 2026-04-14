@@ -1,15 +1,23 @@
 from qtpy.QtWidgets import (
-    QWidget, QPushButton, QFileDialog, QLineEdit, QLabel,
-    QFormLayout, QComboBox, QFrame, QVBoxLayout
+    QWidget,
+    QPushButton,
+    QFileDialog,
+    QLineEdit,
+    QLabel,
+    QFormLayout,
+    QComboBox,
+    QFrame,
+    QVBoxLayout,
 )
 from qtpy.QtCore import Qt
 
 from track2p.gui.cell_plot import ImageMode
 from ..logs import get_logger
+
 logger = get_logger(__name__)
 
-class ImportWindow(QWidget):
 
+class ImportWindow(QWidget):
     def __init__(self, main_wd):
         super().__init__()
         self.main_window = main_wd
@@ -55,21 +63,14 @@ class ImportWindow(QWidget):
         self.trace_choice = QComboBox()
         self.trace_choice.addItems(["F", "dF/F0", "spks"])
 
-        # ────────────────────────────────────────────────────────────────
-        # CHANNEL SELECTOR (ENUM ONLY + SAFE EXTRA OPTIONS)
-        # ────────────────────────────────────────────────────────────────
         self.channel_choice = QComboBox()
 
         # core enum modes (SAFE PATH)
-        self.channel_choice.addItem(
-            "Functional (meanImg)", ImageMode.FUNC_MEAN
-        )
+        self.channel_choice.addItem("Functional (meanImg)", ImageMode.FUNC_MEAN)
         self.channel_choice.addItem(
             "Functional enhanced (meanImgE)", ImageMode.FUNC_MEAN_ENH
         )
-        self.channel_choice.addItem(
-            "Anatomical (chan2)", ImageMode.ANAT_MEAN
-        )
+        self.channel_choice.addItem("Anatomical (chan2)", ImageMode.ANAT_MEAN)
         self.channel_choice.addItem(
             "Anatomical enhanced (chan2E)", ImageMode.ANAT_MEAN_ENH
         )
@@ -86,7 +87,7 @@ class ImportWindow(QWidget):
         root.addWidget(_hline())
 
         # ── Run ──────────────────────────────────────────────────────────
-        self.run_button = QPushButton("▶ Load && Run")
+        self.run_button = QPushButton("Load && Run")
         self.run_button.setEnabled(False)
         self.run_button.clicked.connect(self._run)
 
@@ -95,7 +96,6 @@ class ImportWindow(QWidget):
 
         self.setLayout(root)
 
-    # ────────────────────────────────────────────────────────────────────
     def _browse(self):
         path = QFileDialog.getExistingDirectory(self, "Select suite2p folder")
         if path:
@@ -103,9 +103,6 @@ class ImportWindow(QWidget):
             self.path_display.setText(f"<code>{path}</code>")
             self.run_button.setEnabled(True)
 
-    # ────────────────────────────────────────────────────────────────────
-    # SAFE CHANNEL RESOLUTION
-    # ────────────────────────────────────────────────────────────────────
     def _resolve_channel(self):
         value = self.channel_choice.currentData()
 
@@ -115,13 +112,14 @@ class ImportWindow(QWidget):
 
         # 2. unsupported feature → map to safe fallback
         if value in ("vcorr", "max_proj"):
-            logger.warning(f"'{value}' has no mean image → falling back to FUNC_MEAN_ENH")
+            logger.warning(
+                f"'{value}' has no mean image → falling back to FUNC_MEAN_ENH"
+            )
             return ImageMode.FUNC_MEAN_ENH
 
         # 3. fallback safety
         return ImageMode.FUNC_MEAN_ENH
 
-    # ────────────────────────────────────────────────────────────────────
     def _run(self):
         self.main_window.central_widget.data_management.import_files(
             self.path_to_t2p,
@@ -131,7 +129,6 @@ class ImportWindow(QWidget):
         )
 
 
-# ────────────────────────────────────────────────────────────────────────
 def _hline() -> QFrame:
     line = QFrame()
     line.setFrameShape(QFrame.HLine)
