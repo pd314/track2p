@@ -36,17 +36,17 @@ from .logs import setup_logger
 logger = setup_logger(__name__)
 
 
-def _get_plane_directory_path(dataset_path: Path, plane_index: int) -> Path:
+def _get_plane_directory_path(dataset_path: Path | str, plane_index: int) -> Path:
     """Get the path to a specific plane directory within a dataset.
     
     Args:
-        dataset_path: Path pointing to the suite2p folder
+        dataset_path: Path (or string) pointing to the suite2p folder
         plane_index: Index of the plane
 
     Returns:
         Path to the planeN directory
     """
-    return dataset_path / f"plane{plane_index}"
+    return Path(dataset_path) / f"plane{plane_index}"
 
 
 def _get_valid_cell_mask(
